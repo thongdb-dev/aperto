@@ -31,6 +31,32 @@ Thị trường chụp ảnh hiện tại vận hành rời rạc: booking qua F
 | [docs/08-open-questions.md](./docs/08-open-questions.md) | Các quyết định sản phẩm (đã chốt) |
 | [ROADMAP.md](./ROADMAP.md) | Kế hoạch triển khai theo milestone |
 
+## Chạy local
+
+Yêu cầu: Node.js 22 (`.nvmrc`), Docker.
+
+```bash
+nvm use                        # Node 22
+npm install                    # cài dependencies cho cả 2 workspace
+docker compose up -d           # MongoDB + Redis
+cp apps/api/.env.example apps/api/.env
+npm run dev:api                # API tại http://localhost:4000/api/v1
+npm run dev:web                # Web tại http://localhost:3000
+```
+
+Kiểm tra hạ tầng: `curl http://localhost:4000/api/v1/health` → `{"status":"ok","dependencies":{"mongo":"up","redis":"up"}}`.
+
+Chạy API trong container (không cần Node trên host): `docker compose --profile full up`.
+
+Cấu trúc monorepo (npm workspaces):
+
+```
+apps/
+  web/   # Next.js 15 + TypeScript + MUI + React Query
+  api/   # NestJS 11 + Mongoose + Redis (ioredis)
+docs/    # SRS và tài liệu sản phẩm
+```
+
 ## Workflow tổng thể
 
 ```

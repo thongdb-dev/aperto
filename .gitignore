@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# builds
+apps/api/dist/
+apps/web/.next/
+apps/web/out/
+
+# env — chỉ commit *.env.example
+.env
+.env.*
+!.env.example
+apps/*/.env
+apps/*/.env.*
+!apps/*/.env.example
+
+# logs & misc
+*.log
+.DS_Store
+coverage/
+.turbo/
