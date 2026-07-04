@@ -31,6 +31,7 @@ Thị trường chụp ảnh hiện tại vận hành rời rạc: booking qua F
 | [docs/08-open-questions.md](./docs/08-open-questions.md) | Các quyết định sản phẩm (đã chốt) |
 | [ROADMAP.md](./ROADMAP.md) | Kế hoạch triển khai theo milestone |
 | [docs/dev-guide.md](./docs/dev-guide.md) | Dev guide: monorepo, cấu trúc code, luồng hoạt động (onboarding) |
+| [docs/learning/](./docs/learning/) | Bài tập chi tiết từng tuần theo [LEARNING.md](./LEARNING.md) |
 
 ## Chạy local
 

@@ -16,6 +16,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 ## Tuần 1 — M0: Hạ tầng & khung dự án
 
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-01.md](./docs/learning/tuan-01.md)
+
 **📚 Học**
 - [ ] Docker cơ bản: image vs container, volume, network, Dockerfile, docker-compose (docs chính chủ + chạy thử)
 - [ ] NestJS overview: module / controller / provider / dependency injection — đọc phần Overview trong docs NestJS (~2h)
@@ -33,6 +35,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 - [ ] Giải thích được bằng lời: DI trong NestJS hoạt động thế nào, tại sao service được inject vào controller
 
 ## Tuần 2–3 — M1: Authentication
+
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-02-03.md](./docs/learning/tuan-02-03.md)
 
 **📚 Học**
 - [ ] JWT: cấu trúc token, access vs refresh, tại sao cần rotation, lưu token ở đâu (cookie httpOnly vs localStorage — trade-off)
@@ -55,6 +59,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 ## Tuần 4–5 — M2: Profile, Portfolio & Media pipeline
 
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-04-05.md](./docs/learning/tuan-04-05.md)
+
 **📚 Học**
 - [ ] Presigned URL: tại sao FE upload thẳng lên S3/R2 thay vì qua API; giới hạn content-type và size ngay trong chữ ký
 - [ ] BullMQ: queue, worker, job retry; khi nào cần queue thay vì xử lý sync
@@ -73,6 +79,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 ## Tuần 6–7 — M3: Search & Availability Calendar
 
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-06-07.md](./docs/learning/tuan-06-07.md)
+
 **📚 Học**
 - [ ] MongoDB index: compound index, `explain()`, khi nào index vô dụng
 - [ ] Aggregation pipeline: `$match`, `$lookup`, `$sort`, `$facet` (đếm tổng + phân trang 1 query)
@@ -89,6 +97,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 - [ ] Chỉ ra được query nào dùng index nào qua `explain()`
 
 ## Tuần 8–9 — M4: Booking & Booking Policy
+
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-08-09.md](./docs/learning/tuan-08-09.md)
 
 **📚 Học**
 - [ ] State machine: mô hình hoá trạng thái nghiệp vụ, transition hợp lệ/không hợp lệ
@@ -110,6 +120,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 ## Tuần 10–12 — M5: Project Workspace & Real-time
 
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-10-12.md](./docs/learning/tuan-10-12.md)
+
 **📚 Học**
 - [ ] WebSocket vs HTTP: handshake, room, broadcast; Socket.IO adapter Redis (multi-instance)
 - [ ] NestJS Gateway: `@WebSocketGateway`, auth socket bằng JWT ở handshake
@@ -128,6 +140,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 - [ ] Đi trọn luồng: booking → confirmed → upload RAW → chọn ảnh → upload edited → delivery có watermark
 
 ## Tuần 13–14 — M6: Payment (Stripe trước)
+
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-13-14.md](./docs/learning/tuan-13-14.md)
 
 **📚 Học**
 - [ ] Stripe: PaymentIntent, webhook, chữ ký webhook, test mode + CLI (`stripe listen`)
@@ -148,6 +162,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 ## Tuần 15 — M7: Trust Score, Review, Notification
 
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-15.md](./docs/learning/tuan-15.md)
+
 **📚 Học**
 - [ ] Cron job trong NestJS (`@nestjs/schedule`) vs repeatable job BullMQ
 - [ ] Denormalization: khi nào chấp nhận dữ liệu trùng để đọc nhanh
@@ -162,6 +178,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 - [ ] Hoàn tất 1 project với review 5 sao → chạy job → Trust Score đổi đúng theo công thức tính tay
 
 ## Tuần 16 — M8: Admin & Deploy
+
+> 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-16.md](./docs/learning/tuan-16.md)
 
 **📚 Học**
 - [ ] Deploy thực tế: VPS/Railway/Render (chọn 1), reverse proxy, HTTPS, biến môi trường production
