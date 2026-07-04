@@ -1,6 +1,7 @@
 # Tuần 1 — Bài tập chi tiết: M0 Hạ tầng & khung dự án
 
 > Hướng dẫn thực hành cho [Tuần 1 trong LEARNING.md](../../LEARNING.md#tuần-1--m0-hạ-tầng--khung-dự-án).
+> Lab step-by-step với lệnh cụ thể + bộ câu hỏi có đáp án: [tuan-01-thuc-hanh.md](./tuan-01-thuc-hanh.md).
 >
 > **Bối cảnh:** code M0 đã được scaffold sẵn (commit `a971cf4`) — monorepo, docker-compose, health endpoint, CI đều có. Vì vậy bài tuần này không phải gõ code từ đầu mà là: **học lý thuyết → đọc hiểu từng file → tự phá và sửa lại → kiểm chứng**. Chia thành ~4 buổi, tổng 10–12 giờ.
 
