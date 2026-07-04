@@ -141,3 +141,27 @@ Kiểm tra hạ tầng bất kỳ lúc nào: `curl http://localhost:4000/api/v1/
 | Phân quyền chặn ở `middleware.ts` (FE) **và** guard ở API | FE chỉ là lớp UX; quyền thật luôn nằm ở BE. |
 
 Ghi chú vận hành: nếu `npm install` lỗi `EACCES` ở `~/.npm` (cache dính file thuộc root), chạy một lần: `sudo chown -R $(whoami) ~/.npm`.
+
+## 7. Deploy targets (free tier)
+
+Kế hoạch deploy cho M8. Trước đó chạy local là đủ — kể cả M6/Stripe (dùng `stripe listen` forward webhook về local, chưa cần URL công khai).
+
+| Thành phần | Dịch vụ | Free tier | Ghi chú |
+|---|---|---|---|
+| `apps/web` | **Vercel** (Hobby) | Thoải mái cho hobby | Chính chủ Next.js, auto deploy theo git push |
+| `apps/api` | **Render** (free web service) | 512MB RAM | ⚠️ Ngủ sau ~15 phút idle, cold start ~30–60s |
+| MongoDB | **MongoDB Atlas** (M0) | 512MB storage | Không ngủ, đủ cho toàn bộ MVP |
+| Redis | **Upstash** (free) | Quota theo số lệnh/tháng | Serverless, không ngủ |
+| Ảnh | **Cloudflare R2** | 10GB + egress miễn phí | Đúng lựa chọn trong SRS |
+| Email | **Resend** (free) | ~100 email/ngày | Đủ cho OTP + notification |
+| Thanh toán | **Stripe test mode** | Miễn phí vô hạn | Không cần tiền thật |
+
+**Ba điểm cần biết:**
+
+1. **API ngủ trên Render free là đánh đổi lớn nhất** — ảnh hưởng chat Socket.IO (M5): container ngủ là rớt kết nối, request đầu sau giờ nghỉ chờ cold start. Demo/học chấp nhận được; cần always-on thì nâng instance trả phí (~7$/tháng) hoặc chuyển VPS.
+2. **BullMQ + Upstash free cần để ý** — BullMQ polling Redis liên tục, Upstash free tính quota theo số lệnh nên worker 24/7 có thể ăn hết quota. Xử lý: concurrency thấp + tăng `drainDelay`, hoặc dùng Redis Cloud 30MB free (tính theo dung lượng, không theo lệnh).
+3. **Cron tính Trust Score (M7)** chạy trong process API — API ngủ thì cron không chạy. Giải pháp free: cron-job.org hoặc GitHub Actions schedule gọi endpoint đánh thức + kích hoạt job.
+
+**Phương án thay thế cho M8:** VPS **Oracle Cloud Always Free** (ARM 4 vCPU / 24GB RAM — hào phóng nhất thị trường, nhưng đăng ký hay bị từ chối). Chạy nguyên `docker compose --profile full up` — API + Mongo + Redis luôn bật, sát production và đúng mục tiêu học devops hơn PaaS bấm nút. Web vẫn để Vercel.
+
+> Giới hạn free tier thay đổi thường xuyên — tới M8 kiểm tra lại trang pricing từng dịch vụ trước khi chốt.
