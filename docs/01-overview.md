@@ -66,7 +66,7 @@ Search → Portfolio → Booking → (Optional Deposit) → Project → Shoot
 **Giả định:**
 - Photographer tự chịu trách nhiệm chất lượng dịch vụ thực tế; nền tảng chịu trách nhiệm về minh bạch quy trình.
 - Không hỗ trợ thanh toán tiền mặt/chuyển khoản ngoài hệ thống.
-- Mỗi tài khoản có một vai trò chính tại một thời điểm (cần xác nhận — xem [08-open-questions.md](./08-open-questions.md)).
+- Một tài khoản có thể giữ cả hai vai trò Customer và Photographer, chuyển ngữ cảnh qua role switcher; không được tự booking chính mình (theo Q7 — [08-open-questions.md](./08-open-questions.md)).
 
 **Rủi ro:**
 - Tranh chấp chất lượng ảnh mang tính chủ quan, khó phân xử khách quan.

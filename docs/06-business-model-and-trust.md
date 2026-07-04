@@ -10,7 +10,7 @@
 | **Ads** | Banner cho dịch vụ liên quan (studio, trang phục, makeup...) |
 | **Marketplace** | Album in, khung ảnh, in ấn — *định hướng sau MVP* |
 
-> Tỉ lệ hoa hồng, mức phí subscription/featured cụ thể: chưa chốt — xem [08-open-questions.md](./08-open-questions.md).
+> Commission: **10% cố định** ở v1.0. Subscription: Free / Pro 199k / Studio 499k mỗi tháng, mở bán từ v1.x. Chi tiết theo Q4, Q5 — [08-open-questions.md](./08-open-questions.md).
 
 ## Trust Level
 
@@ -34,7 +34,7 @@ Tính lại định kỳ (ví dụ sau mỗi project hoàn tất) từ các thà
 | Dispute count | ➖ | Số tranh chấp |
 | Verification status | ➕ (cộng cố định) | Đã xác minh danh tính |
 
-> Trọng số từng thành phần và ngưỡng điểm lên level: chưa chốt — xem [08-open-questions.md](./08-open-questions.md).
+> Trọng số cụ thể (Review 30 / Project 20 / Delivery 15 / Verification 15 / Response 10 / Repeat 10, dispute trừ tối đa 30 điểm) và ngưỡng lên level: xem Q1, Q2 — [08-open-questions.md](./08-open-questions.md).
 
 ## Search Score
 

@@ -28,7 +28,7 @@ Thị trường chụp ảnh hiện tại vận hành rời rạc: booking qua F
 | [docs/05-architecture.md](./docs/05-architecture.md) | Kiến trúc hệ thống |
 | [docs/06-business-model-and-trust.md](./docs/06-business-model-and-trust.md) | Business model, Trust Score & Search Score |
 | [docs/07-mvp-scope.md](./docs/07-mvp-scope.md) | Phạm vi MVP v1.0 vs. Phase 2+ |
-| [docs/08-open-questions.md](./docs/08-open-questions.md) | Các quyết định sản phẩm cần chốt |
+| [docs/08-open-questions.md](./docs/08-open-questions.md) | Các quyết định sản phẩm (đã chốt) |
 | [ROADMAP.md](./ROADMAP.md) | Kế hoạch triển khai theo milestone |
 
 ## Workflow tổng thể
@@ -44,4 +44,4 @@ Commission trên giao dịch · Photographer Subscription · Featured Photograph
 
 ## Trạng thái
 
-🚧 **Pre-development** — tài liệu đặc tả (SRS) đã hoàn thiện; chờ chốt các quyết định sản phẩm tại [docs/08-open-questions.md](./docs/08-open-questions.md) trước khi khởi động Milestone 0.
+🚧 **Pre-development** — tài liệu đặc tả (SRS) hoàn thiện, các quyết định sản phẩm đã được Product Owner chốt tại [docs/08-open-questions.md](./docs/08-open-questions.md). Sẵn sàng khởi động Milestone 0 ([ROADMAP.md](./ROADMAP.md)).

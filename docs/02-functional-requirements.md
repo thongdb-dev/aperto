@@ -9,7 +9,7 @@ Các module theo brief gốc: Authentication, Photographer Profile, Portfolio, S
 - **FR-AUTH-03** — Xác thực tài khoản qua OTP (SMS/email) hoặc link xác thực trước khi kích hoạt đầy đủ.
 - **FR-AUTH-04** — Đặt lại mật khẩu qua email/SMS.
 - **FR-AUTH-05** — Quản lý phiên bằng access token + refresh token; đăng xuất thiết bị hiện tại hoặc toàn bộ.
-- **FR-AUTH-06** — Customer có thể đăng ký trở thành Photographer không cần tạo tài khoản mới *(cần xác nhận — Q7)*.
+- **FR-AUTH-06** — Customer có thể đăng ký trở thành Photographer không cần tạo tài khoản mới; hồ sơ Photographer chỉ công khai sau khi Admin duyệt *(theo Q7 — [08-open-questions.md](./08-open-questions.md))*.
 
 ## 2. Photographer Profile
 
@@ -46,7 +46,7 @@ Các module theo brief gốc: Authentication, Photographer Profile, Portfolio, S
   - Deposit: optional; theo **percentage** hoặc **fixed amount**
   - Refund Policy: **full** / **before X days** / **non-refundable**
   - Payment Milestones: hỗ trợ mở rộng
-- **FR-BOOK-03** — Photographer accept/reject trong thời hạn SLA *(giá trị cần xác nhận — Q3)*; booking tự hết hạn nếu quá hạn.
+- **FR-BOOK-03** — Photographer accept/reject trong **24 giờ** (nhắc ở mốc 12 giờ); quá hạn booking chuyển `expired` và Customer được gợi ý photographer tương tự *(theo Q3)*.
 - **FR-BOOK-04** — Booking được accept → tự động tạo Project Workspace.
 - **FR-BOOK-05** — Hai bên có thể huỷ booking; hệ thống tự tính tiền hoàn theo Refund Policy đã snapshot.
 - **FR-BOOK-06** — Xem lịch sử booking theo trạng thái: `pending / confirmed / in_progress / completed / cancelled / disputed`.
@@ -94,7 +94,7 @@ Mỗi booking xác nhận sinh ra một Project Workspace gồm các tab:
 
 - **FR-TRUST-01** — Level: **Bronze → Silver → Gold → Platinum → Elite**; chỉ tăng, không hạ cấp.
 - **FR-TRUST-02** — Trust Score tính từ: completed projects, review, response time, delivery time, repeat customer, dispute (âm), verification.
-- **FR-TRUST-03** — Ngưỡng điểm lên level *(cần xác nhận — Q1)*.
+- **FR-TRUST-03** — Ngưỡng lên level: thang 0–100 kết hợp số project hoàn tất tối thiểu (Silver 40/5, Gold 60/20, Platinum 80/50, Elite 90/100 + duyệt thủ công) *(theo Q1 — [08-open-questions.md](./08-open-questions.md))*.
 - **FR-TRUST-04** — Trust Score/Level hiển thị công khai và là đầu vào của Search Score.
 
 ## 12. Admin & Dispute Management
