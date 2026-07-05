@@ -11,7 +11,7 @@
 
 ### Học (1.5h)
 
-Đọc [docs.docker.com/get-started](https://docs.docker.com/get-started/), nắm 5 khái niệm:
+Đọc [docs.docker.com/get-started](https://docs.docker.com/get-started/), nắm 5 khái niệm (giải thích chi tiết kèm ví dụ từ code Aperto: [tuan-01-docker.md](./tuan-01-docker.md)):
 
 - **Image vs container**: image là "bản cài đặt đóng gói" (read-only), container là một tiến trình chạy từ image. Xoá container không mất image.
 - **Volume**: nơi lưu dữ liệu *sống lâu hơn container*. Không có volume thì xoá container là mất sạch DB.
