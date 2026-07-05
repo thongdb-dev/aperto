@@ -35,9 +35,9 @@ docker exec -it aperto-redis-1 redis-cli ping   # → PONG
 
 **Câu hỏi tự vấn** (đọc kỹ từng dòng `docker-compose.yml`):
 
-- [ ] `healthcheck` để làm gì?
-- [ ] Tại sao service `api` có `depends_on ... condition: service_healthy`?
-- [ ] `profiles: ["full"]` nghĩa là gì? (gợi ý: `docker compose up` mặc định *không* chạy api)
+- [x] `healthcheck` để làm gì?
+- [x] Tại sao service `api` có `depends_on ... condition: service_healthy`?
+- [x] `profiles: ["full"]` nghĩa là gì? (gợi ý: `docker compose up` mặc định *không* chạy api)
 
 ## Buổi 2 (~3h): NestJS overview + dependency injection
 
