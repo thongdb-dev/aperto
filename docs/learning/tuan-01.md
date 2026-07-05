@@ -45,7 +45,7 @@ Phần quan trọng nhất tuần — mục ✅ yêu cầu **giải thích đư�
 
 ### Học (2h)
 
-Đọc [docs.nestjs.com](https://docs.nestjs.com) phần Overview: First steps → Controllers → Providers → Modules. Vừa đọc vừa đối chiếu code thật:
+Đọc [docs.nestjs.com](https://docs.nestjs.com) phần Overview: First steps → Controllers → Providers → Modules (giải thích chi tiết kèm ví dụ từ code Aperto: [tuan-01-nestjs-di.md](./tuan-01-nestjs-di.md)). Vừa đọc vừa đối chiếu code thật:
 
 | Khái niệm | File trong dự án |
 |---|---|

@@ -4,7 +4,7 @@ Hướng dẫn thực hành theo buổi cho từng tuần trong [LEARNING.md](..
 
 | Tuần | Milestone | File |
 |---|---|---|
-| 1 | M0 — Hạ tầng & khung dự án | [tuan-01.md](./tuan-01.md) · [lab + Q&A](./tuan-01-thuc-hanh.md) · [lý thuyết Docker](./tuan-01-docker.md) |
+| 1 | M0 — Hạ tầng & khung dự án | [tuan-01.md](./tuan-01.md) · [lab + Q&A](./tuan-01-thuc-hanh.md) · [lý thuyết Docker](./tuan-01-docker.md) · [lý thuyết NestJS/DI](./tuan-01-nestjs-di.md) |
 | 2–3 | M1 — Authentication | [tuan-02-03.md](./tuan-02-03.md) |
 | 4–5 | M2 — Profile, Portfolio & Media pipeline | [tuan-04-05.md](./tuan-04-05.md) |
 | 6–7 | M3 — Search & Availability Calendar | [tuan-06-07.md](./tuan-06-07.md) |
