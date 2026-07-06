@@ -66,8 +66,8 @@ Cách diễn đạt chuẩn để tự kiểm tra: *"Controller chỉ khai báo 
 
 **Câu hỏi tự vấn:**
 
-- [ ] Tại sao `RedisModule` cần `@Global()` và `exports: [REDIS_CLIENT]`?
-- [ ] Điều gì xảy ra nếu bỏ `exports`? (Thử bỏ thật và chạy — đọc lỗi resolve dependency của Nest là một bài học tốt.)
+- [x] Tại sao `RedisModule` cần `@Global()` và `exports: [REDIS_CLIENT]`?
+- [x] Điều gì xảy ra nếu bỏ `exports`? (Thử bỏ thật và chạy — đọc lỗi resolve dependency của Nest là một bài học tốt.)
 
 ## Buổi 3 (~3h): Monorepo + env validation + chạy full stack
 
@@ -129,8 +129,8 @@ Thêm mục Tuần 1 vào cuối [LEARNING.md](../../LEARNING.md) — học đư
 
 ## Điều kiện chuyển sang Tuần 2
 
-- [ ] Cả 2 mục ✅ đạt
-- [ ] CI xanh trên GitHub
-- [ ] Trả lời được 3 câu "phá để hiểu" ở Buổi 3 mà không cần chạy lại
+- [x] Cả 2 mục ✅ đạt
+- [x] CI xanh trên GitHub
+- [x] Trả lời được 3 câu "phá để hiểu" ở Buổi 3 mà không cần chạy lại
 
 Tuần 2 (M1 Auth) sẽ đụng Mongoose schema và Guard — cả hai đều xây trực tiếp trên nền DI vừa học. Lưu ý M1 **chưa có code sẵn**, nên bài 2 sẽ là tự viết, đúng tinh thần "build first".

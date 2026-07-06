@@ -19,20 +19,20 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 > 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-01.md](./docs/learning/tuan-01.md)
 
 **📚 Học**
-- [ ] Docker cơ bản: image vs container, volume, network, Dockerfile, docker-compose (docs chính chủ + chạy thử)
-- [ ] NestJS overview: module / controller / provider / dependency injection — đọc phần Overview trong docs NestJS (~2h)
-- [ ] Monorepo với npm workspaces hoặc Turborepo (chọn 1, đọc quick start)
+- [x] Docker cơ bản: image vs container, volume, network, Dockerfile, docker-compose (docs chính chủ + chạy thử)
+- [x] NestJS overview: module / controller / provider / dependency injection — đọc phần Overview trong docs NestJS (~2h)
+- [x] Monorepo với npm workspaces hoặc Turborepo (chọn 1, đọc quick start)
 
 **🔨 Làm**
-- [ ] Scaffold monorepo: `apps/web` (Next.js + TS + MUI + React Query) và `apps/api` (NestJS)
-- [ ] `docker-compose.yml`: MongoDB + Redis; API chạy local bằng `npm run start:dev`
-- [ ] ESLint/Prettier chung, `.env` + validation env bằng `@nestjs/config` + Joi
-- [ ] GitHub Actions: lint + build cho cả 2 app
-- [ ] Endpoint `GET /health` trả về trạng thái kết nối Mongo + Redis
+- [x] Scaffold monorepo: `apps/web` (Next.js + TS + MUI + React Query) và `apps/api` (NestJS)
+- [x] `docker-compose.yml`: MongoDB + Redis; API chạy local bằng `npm run start:dev`
+- [x] ESLint/Prettier chung, `.env` + validation env bằng `@nestjs/config` + Joi
+- [x] GitHub Actions: lint + build cho cả 2 app
+- [x] Endpoint `GET /health` trả về trạng thái kết nối Mongo + Redis
 
 **✅ Kiểm chứng**
-- [ ] Máy sạch (hoặc xoá node_modules + volume) chỉ cần `docker compose up` + `npm i` + 1 lệnh là chạy được
-- [ ] Giải thích được bằng lời: DI trong NestJS hoạt động thế nào, tại sao service được inject vào controller
+- [x] Máy sạch (hoặc xoá node_modules + volume) chỉ cần `docker compose up` + `npm i` + 1 lệnh là chạy được
+- [x] Giải thích được bằng lời: DI trong NestJS hoạt động thế nào, tại sao service được inject vào controller
 
 ## Tuần 2–3 — M1: Authentication
 
