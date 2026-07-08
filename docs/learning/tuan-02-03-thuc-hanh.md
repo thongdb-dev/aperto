@@ -270,9 +270,9 @@ Decode thử token trên [jwt.io](https://jwt.io) — dán `$TOKEN` vào, xem pa
 
 ### Lab 3: Guard, decorator, phân quyền
 
-#### Bước 3.1 — Viết 2 file còn lại theo lý thuyết
+#### Bước 3.1 — Viết 3 file theo lý thuyết
 
-`current-user.decorator.ts` đã viết ở Lab 2 (Bước 2.2c). Buổi này chỉ cần thêm theo mẫu ở [tuan-02-guards-passport.md § 5](./tuan-02-guards-passport.md#5-reflector--setmetadata--cách-guard-đọc-decorator-gắn-trên-route): `roles.decorator.ts`, `roles.guard.ts`. Đăng ký `RolesGuard` cần `Reflector` — không cần khai báo tay, Nest tự inject `Reflector` vào constructor vì nó là provider có sẵn của framework (giống cách `ConfigService` tự có sẵn từ Tuần 1).
+Theo đúng mẫu ở [tuan-02-guards-passport.md](./tuan-02-guards-passport.md#4-custom-decorator--gói-code-lặp-lại-thành-1-dòng-khai-báo): `current-user.decorator.ts`, `roles.decorator.ts`, `roles.guard.ts`. Đăng ký `RolesGuard` cần `Reflector` — không cần khai báo tay, Nest tự inject `Reflector` vào constructor vì nó là provider có sẵn của framework (giống cách `ConfigService` tự có sẵn từ Tuần 1).
 
 #### Bước 3.2 — Gắn thử vào 1 endpoint
 
