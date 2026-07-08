@@ -225,7 +225,7 @@ JWT_ACCESS_SECRET: Joi.string().min(32).required(),
 JWT_REFRESH_SECRET: Joi.string().min(32).required(),
 ```
 
-**f) Kiểm tra chéo trước khi chạy thử:** nếu `auth.service.ts` đang gọi `this.config.getOrThrow('JWT_ACCESS_TOKEN')` trong hàm `login()` — tên biến này phải khớp **chính xác** với key khai báo ở `.env.example`/`.env` (`JWT_ACCESS_SECRET`). Lệch tên là bug hay gặp khi gõ tay, và nó chỉ lộ ra khi gọi `/auth/login` (throw `ConfigError`), không lộ lúc khởi động vì `getOrThrow` chỉ được gọi trong hàm, không phải lúc bootstrap.
+**f) Kiểm tra chéo trước khi chạy thử:** nếu `auth.service.ts` đang gọi `this.config.getOrThrow('JWT_ACCESS_SECRET')` trong hàm `login()` — tên biến này phải khớp **chính xác** với key khai báo ở `.env.example`/`.env` (`JWT_ACCESS_SECRET`). Lệch tên là bug hay gặp khi gõ tay, và nó chỉ lộ ra khi gọi `/auth/login` (throw `ConfigError`), không lộ lúc khởi động vì `getOrThrow` chỉ được gọi trong hàm, không phải lúc bootstrap.
 
 **Thí nghiệm "phá để hiểu" (tuỳ chọn, ôn lại DI Tuần 1):** tạm xoá `JwtStrategy` khỏi mảng `providers` của `AuthModule` rồi khởi động lại. Kỳ vọng: lỗi kiểu `Nest can't resolve dependencies of the JwtAuthGuard` hoặc lỗi liên quan tới strategy `'jwt'` không tìm thấy — cùng bản chất lỗi bạn đã gặp ở Tuần 1 khi xoá `exports` của `RedisModule`, chỉ khác chỗ thiếu lần này nằm ở `providers`.
 
