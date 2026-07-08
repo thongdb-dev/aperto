@@ -384,7 +384,7 @@ Mongoose duy trì connection và tự theo dõi trạng thái — `readyState` l
 
 ## Checklist chốt tuần
 
-- [ ] Làm hết Lab 1–4, các thí nghiệm "phá" đều đã hoàn tác (git status sạch)
-- [ ] Trả lời đúng ≥ 12/15 câu phần B mà chưa mở đáp án
-- [ ] 2 mục ✅ trong [LEARNING.md](../../LEARNING.md) đã tick, Nhật ký Tuần 1 đã ghi
-- [ ] CI xanh trên GitHub
+- [x] Làm hết Lab 1–4, các thí nghiệm "phá" đều đã hoàn tác (git status sạch)
+- [x] Trả lời đúng ≥ 12/15 câu phần B mà chưa mở đáp án
+- [x] 2 mục ✅ trong [LEARNING.md](../../LEARNING.md) đã tick, Nhật ký Tuần 1 đã ghi
+- [x] CI xanh trên GitHub

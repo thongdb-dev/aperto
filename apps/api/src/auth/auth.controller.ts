@@ -10,10 +10,12 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 import {
   CurrentUser,
   type AuthenticatedUser,
 } from './decorators/current-user.decorator';
+import { Roles } from './decorators/roles.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -37,5 +39,12 @@ export class AuthController {
   @Get('me')
   getMe(@CurrentUser() user: AuthenticatedUser) {
     return user;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('photographer')
+  @Get('photographer-only')
+  photographerOnly(@CurrentUser() user: AuthenticatedUser) {
+    return { message: 'This route is only accessible to photographers', user };
   }
 }
