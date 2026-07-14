@@ -317,7 +317,25 @@ Buổi khó nhất — vẽ sequence diagram (giấy hoặc mermaid) **trước 
 
 #### Bước 4.1 — Sinh refresh token kèm login
 
+`login()` ở Bước 2.1 ký access token **inline**, đủ dùng khi chưa có refresh token. Giờ `login()` phải làm nhiều việc hơn (ký access + ký refresh + hash + ghi Redis) nên tách phần ký access token ra một hàm private `signAccess()` — vừa gọn `login()`, vừa tái dùng được nếu sau này có chỗ khác cần ký lại access token mà không qua login đầy đủ. Đồng thời cần inject Redis client — dùng lại đúng token `REDIS_CLIENT` đã học ở Tuần 1 (`RedisModule` đã `@Global()` + `exports`, nên `AuthModule` không cần `imports` thêm gì để inject được):
+
 ```ts
+// auth.service.ts — constructor cập nhật, thêm Redis
+constructor(
+  @InjectModel(User.name) private userModel: Model<UserDocument>,
+  @Inject(REDIS_CLIENT) private redis: Redis,
+  private jwtService: JwtService,
+  private config: ConfigService,
+) {}
+
+private signAccess(user: UserDocument) {
+  const payload = { sub: user._id.toString(), roles: user.roles };
+  return this.jwtService.sign(payload, {
+    secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
+    expiresIn: '15m',
+  });
+}
+
 async login(user: UserDocument) {
   const tokenId = randomUUID();
   const accessToken = this.signAccess(user);
@@ -332,6 +350,8 @@ async login(user: UserDocument) {
   return { accessToken, refreshToken };
 }
 ```
+
+`REDIS_CLIENT` và `Redis` import từ đúng chỗ đã dùng ở [health.controller.ts](../../apps/api/src/health/health.controller.ts) Tuần 1: `import { REDIS_CLIENT } from '../redis/redis.module'; import Redis from 'ioredis';`.
 
 #### Bước 4.2 — Endpoint refresh với rotation
 
@@ -371,15 +391,27 @@ async refresh(token: string) {
 
 #### Bước 4.3 — Endpoint logout
 
+Giữ đúng phân công vai trò như `register`/`login`: controller chỉ định tuyến + giao việc, `AuthService` chứa logic thật (decode token, xoá key Redis).
+
 ```ts
+// auth.service.ts
+logout(userId: string, refreshToken: string) {
+  const payload = this.jwtService.decode(refreshToken) as { tokenId: string };
+  return this.redis.del(`refresh:${userId}:${payload.tokenId}`);
+}
+```
+
+```ts
+// auth.controller.ts
 @UseGuards(JwtAuthGuard)
 @Post('logout')
-async logout(@CurrentUser() user, @Body('refreshToken') token: string) {
-  const payload = this.jwtService.decode(token) as { tokenId: string };
-  await this.redis.del(`refresh:${user.userId}:${payload.tokenId}`);
+logout(@CurrentUser() user, @Body('refreshToken') token: string) {
+  this.authService.logout(user.userId, token);
   return { message: 'Đã đăng xuất' };
 }
 ```
+
+Không dùng `@Inject(REDIS_CLIENT)`/`JwtService` trực tiếp trong controller — controller không cần biết Redis key được đặt tên thế nào hay JWT decode ra sao, chỉ cần biết "gọi `authService.logout(...)` là xong". Lợi ích y hệt bài học DI ở Tuần 1: đổi cách lưu session (ví dụ chuyển từ Redis sang DB khác) chỉ sửa `AuthService`, không đụng `AuthController`; và khi viết unit test cho `logout`, mock `AuthService` là đủ, không cần dựng `JwtAuthGuard` + request thật.
 
 #### Bước 4.4 — Test đủ 3 tình huống
 
