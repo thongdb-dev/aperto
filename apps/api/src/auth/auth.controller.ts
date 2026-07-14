@@ -47,4 +47,19 @@ export class AuthController {
   photographerOnly(@CurrentUser() user: AuthenticatedUser) {
     return { message: 'This route is only accessible to photographers', user };
   }
+
+  @Post('refresh')
+  refresh(@Body('refreshToken') token: string) {
+    return this.authService.refresh(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body('refreshToken') token: string,
+  ) {
+    await this.authService.logout(user.userId, token);
+    return { message: 'Đã đăng xuất' };
+  }
 }

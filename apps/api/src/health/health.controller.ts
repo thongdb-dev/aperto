@@ -39,7 +39,9 @@ export class HealthController {
     };
 
     if (body.status !== 'ok') {
-      throw new ServiceUnavailableException(body);
+      throw new ServiceUnavailableException(
+        `Hệ thống đang gặp sự cố (mongo: ${mongo}, redis: ${redis})`,
+      );
     }
     return body;
   }
