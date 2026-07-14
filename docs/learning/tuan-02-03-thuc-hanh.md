@@ -446,13 +446,14 @@ docker exec -it aperto-redis-1 redis-cli KEYS "refresh:*"
 
 ### Lab 5: OTP email xác thực
 
-#### Bước 5.1 — Sinh + lưu OTP theo mẫu
+#### Bước 5.1 — Setup gửi email + sinh/lưu/gửi OTP
 
-Viết theo code mẫu ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#1-otp-là-gì-và-vì-sao-cần-ttl--giới-hạn-số-lần-thử). Gọi hàm sinh OTP ngay sau khi `register` thành công.
+Làm theo đúng thứ tự 4 mục ở [tuan-03-otp-axios-interceptor.md § Phần A](./tuan-03-otp-axios-interceptor.md#phần-a--otp-email-xác-thực):
 
-```bash
-npm install resend   # hoặc dùng nodemailer trỏ Mailtrap SMTP cho dev
-```
+1. [§1](./tuan-03-otp-axios-interceptor.md#1-otp-là-gì-và-vì-sao-cần-ttl--giới-hạn-số-lần-thử) — thiết kế key Redis + hàm `verifyOtp` (dùng ở Bước 5.2).
+2. [§2](./tuan-03-otp-axios-interceptor.md#2-setup-gửi-email--resend) — tạo tài khoản Resend, lấy API key, viết `EmailModule`/`EmailService`.
+3. [§3](./tuan-03-otp-axios-interceptor.md#3-sinh-otp) — hàm sinh mã bằng `crypto.randomInt` (không dùng `Math.random()`).
+4. [§4](./tuan-03-otp-axios-interceptor.md#4-gửi-otp--ghép-redis--email-thành-1-luồng) — `sendOtp()` ghép Redis + email, gọi ngay sau khi `register()` thành công, cộng thêm endpoint `resend-otp` có cooldown.
 
 #### Bước 5.2 — Endpoint verify
 
@@ -467,7 +468,7 @@ async verifyOtp(@Body() dto: VerifyOtpDto) {
 #### Bước 5.3 — Test
 
 ```bash
-# lấy OTP thẳng từ Redis cho dev (thay vì đọc email Mailtrap)
+# lấy OTP thẳng từ Redis cho dev nhanh (thay vì đợi mở email thật đã gửi qua Resend)
 docker exec -it aperto-redis-1 redis-cli GET "otp:<userId>"
 
 curl -s -X POST http://localhost:4000/api/v1/auth/verify-otp \
@@ -487,7 +488,7 @@ Trong `apps/web`, dùng MUI + `react-hook-form` + `zod` (hoặc validate tay kh�
 
 #### Bước 6.2 — Axios instance với interceptor
 
-Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#5-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
+Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#7-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
 
 #### Bước 6.3 — Test tận mắt race condition đã học
 
