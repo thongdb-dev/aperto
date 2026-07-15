@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { RedisModule } from './redis/redis.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuthModule } from './auth/auth.module';
       }),
     }),
     RedisModule,
+    EmailModule,
     UsersModule,
     AuthModule,
     HealthModule,

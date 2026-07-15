@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -9,12 +10,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { TooManyRequestsException } from '../common/exceptions/too-many-requests.exception';
 import { isMongoServerError } from '../common/utils/mongo-error.util';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { RegisterDto } from './dto/register.dto';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomInt, randomUUID } from 'crypto';
 import { Redis } from 'ioredis';
 import { REDIS_CLIENT } from 'src/redis/redis.module';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +26,7 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private redis: Redis,
     private jwtService: JwtService,
     private config: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -50,7 +54,7 @@ export class AuthService {
     return match ? user : null;
   }
 
-  signAccess(user: UserDocument) {
+  private signAccess(user: UserDocument) {
     const payload = { sub: user._id.toString(), roles: user.roles };
     return this.jwtService.sign(payload, {
       secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
@@ -115,5 +119,51 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token không hợp lệ');
     }
     return this.redis.del(`refresh:${userId}:${payload.tokenId}`);
+  }
+
+  async verifyOtp(userId: string, code: string) {
+    const key = `otp:${userId}`;
+    const attemptsKey = `otp_attempts:${userId}`;
+    const attempts = parseInt((await this.redis.get(attemptsKey)) ?? '0', 10);
+    if (attempts === 1) {
+      await this.redis.expire(attemptsKey, 600);
+    }
+    if (attempts > 5) {
+      throw new TooManyRequestsException('Quá số lần thử, yêu cầu OTP mới');
+    }
+
+    const stored = await this.redis.get(key);
+    if (!stored || stored !== code) {
+      throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
+    }
+
+    await this.redis.del(key, attemptsKey);
+    return true;
+  }
+
+  private generateOtp(): string {
+    return randomInt(100000, 1000000).toString();
+  }
+
+  async sendOtp(user: UserDocument) {
+    const code = this.generateOtp();
+    await this.redis.set(`otp:${user._id.toString()}`, code, 'EX', 600);
+    await this.emailService.sendOtpEmail(user.email, code);
+  }
+
+  async requestOtp(userId: string) {
+    const coolDownKey = `otp_cool_down:${userId}`;
+    if (await this.redis.exists(coolDownKey)) {
+      throw new BadRequestException(
+        'Vui lòng đợi 1 phút trước khi yêu cầu mã mới',
+      );
+    }
+    await this.redis.set(coolDownKey, '1', 'EX', 60);
+
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    await this.sendOtp(user);
   }
 }

@@ -446,13 +446,14 @@ docker exec -it aperto-redis-1 redis-cli KEYS "refresh:*"
 
 ### Lab 5: OTP email xác thực
 
-#### Bước 5.1 — Sinh + lưu OTP theo mẫu
+#### Bước 5.1 — Setup gửi email + sinh/lưu/gửi OTP
 
-Viết theo code mẫu ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#1-otp-là-gì-và-vì-sao-cần-ttl--giới-hạn-số-lần-thử). Gọi hàm sinh OTP ngay sau khi `register` thành công.
+Làm theo đúng thứ tự 4 mục ở [tuan-03-otp-axios-interceptor.md § Phần A](./tuan-03-otp-axios-interceptor.md#phần-a--otp-email-xác-thực):
 
-```bash
-npm install resend   # hoặc dùng nodemailer trỏ Mailtrap SMTP cho dev
-```
+1. [§1](./tuan-03-otp-axios-interceptor.md#1-otp-là-gì-và-vì-sao-cần-ttl--giới-hạn-số-lần-thử) — thiết kế key Redis + hàm `verifyOtp` (dùng ở Bước 5.2).
+2. [§2](./tuan-03-otp-axios-interceptor.md#2-setup-gửi-email--resend) — tạo tài khoản Resend, lấy API key, viết `EmailModule`/`EmailService`.
+3. [§3](./tuan-03-otp-axios-interceptor.md#3-sinh-otp) — hàm sinh mã bằng `crypto.randomInt` (không dùng `Math.random()`).
+4. [§4](./tuan-03-otp-axios-interceptor.md#4-gửi-otp--ghép-redis--email-thành-1-luồng) — `sendOtp()` ghép Redis + email, gọi ngay sau khi `register()` thành công, cộng thêm endpoint `resend-otp` có cooldown.
 
 #### Bước 5.2 — Endpoint verify
 
@@ -467,7 +468,7 @@ async verifyOtp(@Body() dto: VerifyOtpDto) {
 #### Bước 5.3 — Test
 
 ```bash
-# lấy OTP thẳng từ Redis cho dev (thay vì đọc email Mailtrap)
+# lấy OTP thẳng từ Redis cho dev nhanh (thay vì đợi mở email thật đã gửi qua Resend)
 docker exec -it aperto-redis-1 redis-cli GET "otp:<userId>"
 
 curl -s -X POST http://localhost:4000/api/v1/auth/verify-otp \
@@ -476,6 +477,87 @@ curl -s -X POST http://localhost:4000/api/v1/auth/verify-otp \
 
 # thử sai OTP 6 lần liên tiếp → lần thứ 6 phải bị chặn dù OTP đúng
 ```
+
+#### Bước 5.4 — Guard chặn hành động khi chưa xác thực (tuỳ chọn)
+
+Theo quyết định "login giới hạn" ở [tuan-03-otp-axios-interceptor.md §5](./tuan-03-otp-axios-interceptor.md#5-chặn-hành-động-khi-chưa-xác-thực): `pending_verification` vẫn login được, chỉ endpoint nhạy cảm mới chặn. Ghép đúng theo pattern `@Roles()`/`RolesGuard` đã viết ở Lab 3.
+
+**a) Đưa `status` vào JWT payload** — sửa `signAccess` (đã viết ở Bước 2.1) để payload có thêm `status`:
+
+```ts
+// auth.service.ts — signAccess, thêm status vào payload
+signAccess(user: UserDocument) {
+  const payload = { sub: user._id.toString(), roles: user.roles, status: user.status };
+  return this.jwtService.sign(payload, {
+    secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
+    expiresIn: '15m',
+  });
+}
+```
+
+Và `JwtStrategy.validate` (Bước 2.2) đọc thêm field đó, `AuthenticatedUser` (trong `current-user.decorator.ts`) thêm `status: string` vào interface:
+
+```ts
+// strategies/jwt.strategy.ts
+validate(payload: { sub: string; roles: string[]; status: string }) {
+  return { userId: payload.sub, roles: payload.roles, status: payload.status };
+}
+```
+
+**b) Decorator** `auth/decorators/require-verified.decorator.ts`:
+
+```ts
+import { SetMetadata } from '@nestjs/common';
+
+export const REQUIRE_VERIFIED_KEY = 'requireVerified';
+export const RequireVerified = () => SetMetadata(REQUIRE_VERIFIED_KEY, true);
+```
+
+**c) Guard** `auth/guards/verified.guard.ts` — cùng khung với `roles.guard.ts`, chỉ đổi điều kiện:
+
+```ts
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
+import { AuthenticatedUser } from '../decorators/current-user.decorator';
+import { REQUIRE_VERIFIED_KEY } from '../decorators/require-verified.decorator';
+
+interface RequestWithUser extends Request {
+  user: AuthenticatedUser;
+}
+
+@Injectable()
+export class VerifiedGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const require = this.reflector.getAllAndOverride<boolean>(REQUIRE_VERIFIED_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!require) return true;
+
+    const { user } = context.switchToHttp().getRequest<RequestWithUser>();
+    if (user?.status !== 'active') {
+      throw new ForbiddenException('Cần xác thực email trước khi thực hiện thao tác này');
+    }
+    return true;
+  }
+}
+```
+
+**d) Áp dụng lên 1 endpoint nhạy cảm để test** — chưa có booking/thanh toán ở M1, nên gắn thử lên chính `/auth/me` (chỉ để kiểm chứng guard hoạt động, gỡ ra sau khi test xong, vì `/me` không phải endpoint thật sự cần chặn):
+
+```ts
+@UseGuards(JwtAuthGuard, VerifiedGuard)   // thứ tự: JwtAuthGuard trước để có request.user
+@RequireVerified()
+@Get('me')
+me(@CurrentUser() user: AuthenticatedUser) {
+  return user;
+}
+```
+
+Test: đăng ký user mới (status `pending_verification` mặc định) → login → gọi `/auth/me` → kỳ vọng `403 Forbidden`. Verify OTP xong → login lại (để lấy access token mới có `status: "active"`) → gọi lại `/auth/me` → kỳ vọng `200`.
 
 ---
 
@@ -487,7 +569,7 @@ Trong `apps/web`, dùng MUI + `react-hook-form` + `zod` (hoặc validate tay kh�
 
 #### Bước 6.2 — Axios instance với interceptor
 
-Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#5-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
+Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#7-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
 
 #### Bước 6.3 — Test tận mắt race condition đã học
 

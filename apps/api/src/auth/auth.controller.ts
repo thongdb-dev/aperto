@@ -62,4 +62,9 @@ export class AuthController {
     await this.authService.logout(user.userId, token);
     return { message: 'Đã đăng xuất' };
   }
+
+  @Post('resend-otp')
+  resendOtp(@Body('userId') userId: string) {
+    return this.authService.requestOtp(userId);
+  }
 }
