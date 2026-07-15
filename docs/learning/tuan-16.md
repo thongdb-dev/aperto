@@ -29,7 +29,7 @@
 - [ ] Role `admin` (seed 1 tài khoản bằng script); guard admin cho toàn bộ route `/admin/*`
 - [ ] Duyệt verification: danh sách photographer `pending` → approve/reject (Q7: duyệt xong hồ sơ mới công khai; approve → verification 15% trong Trust Score đổi ở job đêm)
 - [ ] Dashboard thống kê bằng aggregation: user mới theo tuần, booking theo status, GMV + commission theo tháng — 1 endpoint `$facet`
-- [ ] FE admin tối giản: bảng + nút, không cần đẹp (MUI DataGrid là đủ)
+- [ ] FE admin tối giản: bảng + nút, không cần đẹp (shadcn/ui `Table` + `@tanstack/react-table` cho sort/filter là đủ)
 
 ### Buổi 4 (~3h): Dispute theo Q9
 

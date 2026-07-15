@@ -563,15 +563,19 @@ Test: đăng ký user mới (status `pending_verification` mặc định) → lo
 
 ### Lab 6: FE + form + axios interceptor
 
-#### Bước 6.1 — Form đăng ký/đăng nhập
+#### Bước 6.1 — Setup shadcn/ui + Tailwind + theme màu
 
-Trong `apps/web`, dùng MUI + `react-hook-form` + `zod` (hoặc validate tay khớp DTO server: email hợp lệ, password ≥ 8). Gọi API qua instance axios sẽ viết ở bước sau.
+Thay MUI (đang cài sẵn trong `apps/web`) bằng **shadcn/ui + Tailwind**, kèm light/dark mode và bảng màu thương hiệu (`#FFC700` / `#0A0A0B` / `#FFFFFF`). Hướng dẫn đầy đủ từng lệnh + code: [tuan-02-03-shadcn-setup.md](./tuan-02-03-shadcn-setup.md).
 
-#### Bước 6.2 — Axios instance với interceptor
+#### Bước 6.2 — Form đăng ký/đăng nhập
+
+Trong `apps/web`, dùng component shadcn/ui (`Input`, `Button`, `Form` — cài qua `npx shadcn@latest add input button form`) + `react-hook-form` + `zod` (hoặc validate tay khớp DTO server: email hợp lệ, password ≥ 8). Gọi API qua instance axios sẽ viết ở bước sau.
+
+#### Bước 6.3 — Axios instance với interceptor
 
 Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#7-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
 
-#### Bước 6.3 — Test tận mắt race condition đã học
+#### Bước 6.4 — Test tận mắt race condition đã học
 
 Trong DevTools console của trang `/me` (đã login), giảm TTL access token xuống 10 giây (env dev), rồi bắn 3 request song song sau khi hết hạn:
 
@@ -582,7 +586,7 @@ Promise.all([api.get('/auth/me'), api.get('/auth/me'), api.get('/auth/me')])
 
 Mở tab Network: kỳ vọng thấy **chỉ 1 lời gọi** `/auth/refresh` dù có 3 request 401 — nếu thấy 3 lời gọi refresh, hàng đợi (`isRefreshing`/`pendingQueue`) chưa hoạt động đúng, quay lại đọc mục 5 trong lý thuyết.
 
-#### Bước 6.4 — Trang /me + logout
+#### Bước 6.5 — Trang /me + logout
 
 Hiển thị `email`, `roles` từ response `/auth/me`; nút logout gọi `/auth/logout` rồi xoá access token khỏi bộ nhớ JS + điều hướng về `/login`.
 
