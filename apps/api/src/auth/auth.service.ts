@@ -10,14 +10,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { Redis } from 'ioredis';
+import { createHash, randomInt, randomUUID } from 'crypto';
+import { REDIS_CLIENT } from 'src/redis/redis.module';
+import { EmailService } from 'src/email/email.service';
 import { TooManyRequestsException } from '../common/exceptions/too-many-requests.exception';
 import { isMongoServerError } from '../common/utils/mongo-error.util';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { RegisterDto } from './dto/register.dto';
-import { createHash, randomInt, randomUUID } from 'crypto';
-import { Redis } from 'ioredis';
-import { REDIS_CLIENT } from 'src/redis/redis.module';
-import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -55,7 +55,11 @@ export class AuthService {
   }
 
   private signAccess(user: UserDocument) {
-    const payload = { sub: user._id.toString(), roles: user.roles };
+    const payload = {
+      sub: user._id.toString(),
+      roles: user.roles,
+      status: user.status,
+    };
     return this.jwtService.sign(payload, {
       secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
       expiresIn: '15m',

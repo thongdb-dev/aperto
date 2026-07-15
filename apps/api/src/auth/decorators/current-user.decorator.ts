@@ -4,6 +4,7 @@ import { Request } from 'express';
 export interface AuthenticatedUser {
   userId: string;
   roles: string[];
+  status: string;
 }
 
 interface RequestWithUser extends Request {
