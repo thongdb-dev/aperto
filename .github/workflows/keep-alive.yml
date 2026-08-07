@@ -1,0 +1,16 @@
+name: Keep API awake
+
+# Render free tier ngủ sau 15 phút không có traffic — ping /health mỗi 10 phút để giữ
+# service luôn ấm. Đây là workaround cho free tier, không thay thế cho việc nâng plan
+# nếu cần uptime thật sự đảm bảo.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl -sf --max-time 20 --retry 2 --retry-delay 5 https://aperto.onrender.com/api/v1/health
