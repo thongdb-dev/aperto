@@ -7,4 +7,6 @@ export const envValidationSchema = Joi.object({
   PORT: Joi.number().port().default(4000),
   MONGODB_URI: Joi.string().uri().required(),
   REDIS_URL: Joi.string().uri().required(),
+  RESEND_API_KEY: Joi.string().required(),
+  RESEND_FROM_EMAIL: Joi.string().email().required(),
 });

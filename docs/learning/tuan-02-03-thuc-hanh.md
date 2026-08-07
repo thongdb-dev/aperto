@@ -134,20 +134,100 @@ async login(user: UserDocument) {
 
 #### Bước 2.2 — Passport JWT strategy + Guard
 
-Viết `jwt.strategy.ts` và `JwtAuthGuard` theo mẫu ở [tuan-02-guards-passport.md](./tuan-02-guards-passport.md#3-passport-strategy--nơi-thực-sự-xác-thực). Đăng ký `PassportModule` + `JwtModule` trong `AuthModule`:
+Ba file nhỏ, viết theo đúng thứ tự phụ thuộc: **strategy trước** (nơi thực sự xác thực), **guard sau** (chỉ gọi lại strategy), **decorator cuối** (đọc kết quả strategy đã gắn vào `request.user`). Giải thích đầy đủ ở [tuan-02-guards-passport.md § 3](./tuan-02-guards-passport.md#3-passport-strategy--nơi-thực-sự-xác-thực).
+
+**a) `auth/strategies/jwt.strategy.ts`** — nơi thực sự verify chữ ký + hạn token:
 
 ```ts
+import { Injectable } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+
+interface JwtPayload {
+  sub: string;
+  roles: string[];
+}
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(config: ConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      ignoreExpiration: false,
+    });
+  }
+
+  validate(payload: JwtPayload) {
+    // giá trị trả về ở đây được Nest tự động gắn vào request.user
+    return { userId: payload.sub, roles: payload.roles };
+  }
+}
+```
+
+Tên class `JwtStrategy` không tự nhiên gắn với chuỗi `'jwt'` dùng ở `AuthGuard('jwt')` (mục b) — chúng khớp nhau vì `PassportStrategy(Strategy)` không truyền tên tuỳ chỉnh, nên Passport dùng tên mặc định của package `passport-jwt` là `"jwt"`. Nếu sau này có nhiều JWT strategy khác nhau (ví dụ verify refresh token riêng), truyền tên thứ 2: `PassportStrategy(Strategy, 'jwt-refresh')` rồi gọi `AuthGuard('jwt-refresh')`.
+
+**b) `auth/guards/jwt-auth.guard.ts`** — chỉ 2 dòng vì mọi logic đã nằm ở strategy:
+
+```ts
+import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+```
+
+**c) `auth/decorators/current-user.decorator.ts`** — cần viết ngay bây giờ vì endpoint `/auth/me` ở Bước 2.3 dùng `@CurrentUser()` (Lab 3 chỉ thêm `@Roles()` + `RolesGuard`, decorator này không viết lại):
+
+```ts
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+
+export const CurrentUser = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+  },
+);
+```
+
+**d) Đăng ký `PassportModule` + `JwtModule` trong `AuthModule`** — thêm vào `imports`, và thêm `JwtStrategy` vào `providers` (guard không cần khai báo provider — `@Injectable()` và dùng trực tiếp trong `@UseGuards()` là đủ):
+
+```ts
+// auth/auth.module.ts
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { UsersModule } from '../users/users.module';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
+
 @Module({
   imports: [
+    UsersModule,             // đã export MongooseModule ở Lab 1 — không khai báo forFeature lại ở đây
     PassportModule,
-    JwtModule.register({}),   // secret truyền tay lúc sign/verify, không set global ở đây
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    JwtModule.register({}),  // {} vì secret truyền tay lúc sign()/verify(), không đặt global ở đây
   ],
-  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
 })
 export class AuthModule {}
 ```
+
+Nếu `AuthModule` bạn đang có mới chỉ `imports: [UsersModule]`, chỉ cần **thêm** `PassportModule`, `JwtModule.register({})` vào `imports` và `JwtStrategy` vào `providers` — giữ nguyên `UsersModule`, **không** thêm `MongooseModule.forFeature(...)` một lần nữa (đó là dư thừa: model `User` đã có sẵn nhờ `UsersModule` export `MongooseModule`, xem lại [Bước 1.1](#bước-11--viết-schema)).
+
+**e) Cập nhật `env.validation.ts`** để 2 secret JWT là bắt buộc — thiếu thì app phải từ chối khởi động ngay (fail-fast), thay vì để lộ ra runtime khi có request đầu tiên gọi `config.getOrThrow(...)` mới throw (đúng bài học Joi ở Tuần 1):
+
+```ts
+// config/env.validation.ts — thêm 2 dòng vào object hiện có
+JWT_ACCESS_SECRET: Joi.string().min(32).required(),
+JWT_REFRESH_SECRET: Joi.string().min(32).required(),
+```
+
+**f) Kiểm tra chéo trước khi chạy thử:** nếu `auth.service.ts` đang gọi `this.config.getOrThrow('JWT_ACCESS_SECRET')` trong hàm `login()` — tên biến này phải khớp **chính xác** với key khai báo ở `.env.example`/`.env` (`JWT_ACCESS_SECRET`). Lệch tên là bug hay gặp khi gõ tay, và nó chỉ lộ ra khi gọi `/auth/login` (throw `ConfigError`), không lộ lúc khởi động vì `getOrThrow` chỉ được gọi trong hàm, không phải lúc bootstrap.
+
+**Thí nghiệm "phá để hiểu" (tuỳ chọn, ôn lại DI Tuần 1):** tạm xoá `JwtStrategy` khỏi mảng `providers` của `AuthModule` rồi khởi động lại. Kỳ vọng: lỗi kiểu `Nest can't resolve dependencies of the JwtAuthGuard` hoặc lỗi liên quan tới strategy `'jwt'` không tìm thấy — cùng bản chất lỗi bạn đã gặp ở Tuần 1 khi xoá `exports` của `RedisModule`, chỉ khác chỗ thiếu lần này nằm ở `providers`.
 
 #### Bước 2.3 — Endpoint login + /me
 
@@ -237,7 +317,25 @@ Buổi khó nhất — vẽ sequence diagram (giấy hoặc mermaid) **trước 
 
 #### Bước 4.1 — Sinh refresh token kèm login
 
+`login()` ở Bước 2.1 ký access token **inline**, đủ dùng khi chưa có refresh token. Giờ `login()` phải làm nhiều việc hơn (ký access + ký refresh + hash + ghi Redis) nên tách phần ký access token ra một hàm private `signAccess()` — vừa gọn `login()`, vừa tái dùng được nếu sau này có chỗ khác cần ký lại access token mà không qua login đầy đủ. Đồng thời cần inject Redis client — dùng lại đúng token `REDIS_CLIENT` đã học ở Tuần 1 (`RedisModule` đã `@Global()` + `exports`, nên `AuthModule` không cần `imports` thêm gì để inject được):
+
 ```ts
+// auth.service.ts — constructor cập nhật, thêm Redis
+constructor(
+  @InjectModel(User.name) private userModel: Model<UserDocument>,
+  @Inject(REDIS_CLIENT) private redis: Redis,
+  private jwtService: JwtService,
+  private config: ConfigService,
+) {}
+
+private signAccess(user: UserDocument) {
+  const payload = { sub: user._id.toString(), roles: user.roles };
+  return this.jwtService.sign(payload, {
+    secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
+    expiresIn: '15m',
+  });
+}
+
 async login(user: UserDocument) {
   const tokenId = randomUUID();
   const accessToken = this.signAccess(user);
@@ -252,6 +350,8 @@ async login(user: UserDocument) {
   return { accessToken, refreshToken };
 }
 ```
+
+`REDIS_CLIENT` và `Redis` import từ đúng chỗ đã dùng ở [health.controller.ts](../../apps/api/src/health/health.controller.ts) Tuần 1: `import { REDIS_CLIENT } from '../redis/redis.module'; import Redis from 'ioredis';`.
 
 #### Bước 4.2 — Endpoint refresh với rotation
 
@@ -291,15 +391,27 @@ async refresh(token: string) {
 
 #### Bước 4.3 — Endpoint logout
 
+Giữ đúng phân công vai trò như `register`/`login`: controller chỉ định tuyến + giao việc, `AuthService` chứa logic thật (decode token, xoá key Redis).
+
 ```ts
+// auth.service.ts
+logout(userId: string, refreshToken: string) {
+  const payload = this.jwtService.decode(refreshToken) as { tokenId: string };
+  return this.redis.del(`refresh:${userId}:${payload.tokenId}`);
+}
+```
+
+```ts
+// auth.controller.ts
 @UseGuards(JwtAuthGuard)
 @Post('logout')
-async logout(@CurrentUser() user, @Body('refreshToken') token: string) {
-  const payload = this.jwtService.decode(token) as { tokenId: string };
-  await this.redis.del(`refresh:${user.userId}:${payload.tokenId}`);
+logout(@CurrentUser() user, @Body('refreshToken') token: string) {
+  this.authService.logout(user.userId, token);
   return { message: 'Đã đăng xuất' };
 }
 ```
+
+Không dùng `@Inject(REDIS_CLIENT)`/`JwtService` trực tiếp trong controller — controller không cần biết Redis key được đặt tên thế nào hay JWT decode ra sao, chỉ cần biết "gọi `authService.logout(...)` là xong". Lợi ích y hệt bài học DI ở Tuần 1: đổi cách lưu session (ví dụ chuyển từ Redis sang DB khác) chỉ sửa `AuthService`, không đụng `AuthController`; và khi viết unit test cho `logout`, mock `AuthService` là đủ, không cần dựng `JwtAuthGuard` + request thật.
 
 #### Bước 4.4 — Test đủ 3 tình huống
 
@@ -334,13 +446,14 @@ docker exec -it aperto-redis-1 redis-cli KEYS "refresh:*"
 
 ### Lab 5: OTP email xác thực
 
-#### Bước 5.1 — Sinh + lưu OTP theo mẫu
+#### Bước 5.1 — Setup gửi email + sinh/lưu/gửi OTP
 
-Viết theo code mẫu ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#1-otp-là-gì-và-vì-sao-cần-ttl--giới-hạn-số-lần-thử). Gọi hàm sinh OTP ngay sau khi `register` thành công.
+Làm theo đúng thứ tự 4 mục ở [tuan-03-otp-axios-interceptor.md § Phần A](./tuan-03-otp-axios-interceptor.md#phần-a--otp-email-xác-thực):
 
-```bash
-npm install resend   # hoặc dùng nodemailer trỏ Mailtrap SMTP cho dev
-```
+1. [§1](./tuan-03-otp-axios-interceptor.md#1-otp-là-gì-và-vì-sao-cần-ttl--giới-hạn-số-lần-thử) — thiết kế key Redis + hàm `verifyOtp` (dùng ở Bước 5.2).
+2. [§2](./tuan-03-otp-axios-interceptor.md#2-setup-gửi-email--resend) — tạo tài khoản Resend, lấy API key, viết `EmailModule`/`EmailService`.
+3. [§3](./tuan-03-otp-axios-interceptor.md#3-sinh-otp) — hàm sinh mã bằng `crypto.randomInt` (không dùng `Math.random()`).
+4. [§4](./tuan-03-otp-axios-interceptor.md#4-gửi-otp--ghép-redis--email-thành-1-luồng) — `sendOtp()` ghép Redis + email, gọi ngay sau khi `register()` thành công, cộng thêm endpoint `resend-otp` có cooldown.
 
 #### Bước 5.2 — Endpoint verify
 
@@ -355,7 +468,7 @@ async verifyOtp(@Body() dto: VerifyOtpDto) {
 #### Bước 5.3 — Test
 
 ```bash
-# lấy OTP thẳng từ Redis cho dev (thay vì đọc email Mailtrap)
+# lấy OTP thẳng từ Redis cho dev nhanh (thay vì đợi mở email thật đã gửi qua Resend)
 docker exec -it aperto-redis-1 redis-cli GET "otp:<userId>"
 
 curl -s -X POST http://localhost:4000/api/v1/auth/verify-otp \
@@ -365,19 +478,104 @@ curl -s -X POST http://localhost:4000/api/v1/auth/verify-otp \
 # thử sai OTP 6 lần liên tiếp → lần thứ 6 phải bị chặn dù OTP đúng
 ```
 
+#### Bước 5.4 — Guard chặn hành động khi chưa xác thực (tuỳ chọn)
+
+Theo quyết định "login giới hạn" ở [tuan-03-otp-axios-interceptor.md §5](./tuan-03-otp-axios-interceptor.md#5-chặn-hành-động-khi-chưa-xác-thực): `pending_verification` vẫn login được, chỉ endpoint nhạy cảm mới chặn. Ghép đúng theo pattern `@Roles()`/`RolesGuard` đã viết ở Lab 3.
+
+**a) Đưa `status` vào JWT payload** — sửa `signAccess` (đã viết ở Bước 2.1) để payload có thêm `status`:
+
+```ts
+// auth.service.ts — signAccess, thêm status vào payload
+signAccess(user: UserDocument) {
+  const payload = { sub: user._id.toString(), roles: user.roles, status: user.status };
+  return this.jwtService.sign(payload, {
+    secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
+    expiresIn: '15m',
+  });
+}
+```
+
+Và `JwtStrategy.validate` (Bước 2.2) đọc thêm field đó, `AuthenticatedUser` (trong `current-user.decorator.ts`) thêm `status: string` vào interface:
+
+```ts
+// strategies/jwt.strategy.ts
+validate(payload: { sub: string; roles: string[]; status: string }) {
+  return { userId: payload.sub, roles: payload.roles, status: payload.status };
+}
+```
+
+**b) Decorator** `auth/decorators/require-verified.decorator.ts`:
+
+```ts
+import { SetMetadata } from '@nestjs/common';
+
+export const REQUIRE_VERIFIED_KEY = 'requireVerified';
+export const RequireVerified = () => SetMetadata(REQUIRE_VERIFIED_KEY, true);
+```
+
+**c) Guard** `auth/guards/verified.guard.ts` — cùng khung với `roles.guard.ts`, chỉ đổi điều kiện:
+
+```ts
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
+import { AuthenticatedUser } from '../decorators/current-user.decorator';
+import { REQUIRE_VERIFIED_KEY } from '../decorators/require-verified.decorator';
+
+interface RequestWithUser extends Request {
+  user: AuthenticatedUser;
+}
+
+@Injectable()
+export class VerifiedGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const require = this.reflector.getAllAndOverride<boolean>(REQUIRE_VERIFIED_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!require) return true;
+
+    const { user } = context.switchToHttp().getRequest<RequestWithUser>();
+    if (user?.status !== 'active') {
+      throw new ForbiddenException('Cần xác thực email trước khi thực hiện thao tác này');
+    }
+    return true;
+  }
+}
+```
+
+**d) Áp dụng lên 1 endpoint nhạy cảm để test** — chưa có booking/thanh toán ở M1, nên gắn thử lên chính `/auth/me` (chỉ để kiểm chứng guard hoạt động, gỡ ra sau khi test xong, vì `/me` không phải endpoint thật sự cần chặn):
+
+```ts
+@UseGuards(JwtAuthGuard, VerifiedGuard)   // thứ tự: JwtAuthGuard trước để có request.user
+@RequireVerified()
+@Get('me')
+me(@CurrentUser() user: AuthenticatedUser) {
+  return user;
+}
+```
+
+Test: đăng ký user mới (status `pending_verification` mặc định) → login → gọi `/auth/me` → kỳ vọng `403 Forbidden`. Verify OTP xong → login lại (để lấy access token mới có `status: "active"`) → gọi lại `/auth/me` → kỳ vọng `200`.
+
 ---
 
 ### Lab 6: FE + form + axios interceptor
 
-#### Bước 6.1 — Form đăng ký/đăng nhập
+#### Bước 6.1 — Setup shadcn/ui + Tailwind + theme màu
 
-Trong `apps/web`, dùng MUI + `react-hook-form` + `zod` (hoặc validate tay khớp DTO server: email hợp lệ, password ≥ 8). Gọi API qua instance axios sẽ viết ở bước sau.
+Thay MUI (đang cài sẵn trong `apps/web`) bằng **shadcn/ui + Tailwind**, kèm light/dark mode và bảng màu thương hiệu (`#FFC700` / `#0A0A0B` / `#FFFFFF`). Hướng dẫn đầy đủ từng lệnh + code: [tuan-02-03-shadcn-setup.md](./tuan-02-03-shadcn-setup.md).
 
-#### Bước 6.2 — Axios instance với interceptor
+#### Bước 6.2 — Form đăng ký/đăng nhập
 
-Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#5-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
+Trong `apps/web`, dùng component shadcn/ui (`Input`, `Button`, `Form` — cài qua `npx shadcn@latest add input button form`) + `react-hook-form` + `zod` (hoặc validate tay khớp DTO server: email hợp lệ, password ≥ 8). Gọi API qua instance axios sẽ viết ở bước sau.
 
-#### Bước 6.3 — Test tận mắt race condition đã học
+#### Bước 6.3 — Axios instance với interceptor
+
+Viết đúng theo code đầy đủ ở [tuan-03-otp-axios-interceptor.md](./tuan-03-otp-axios-interceptor.md#7-response-interceptor-bắt-401--refresh--retry) — copy khung, đổi theo cách bạn lưu access token (biến module-level, hoặc React context/Zustand store).
+
+#### Bước 6.4 — Test tận mắt race condition đã học
 
 Trong DevTools console của trang `/me` (đã login), giảm TTL access token xuống 10 giây (env dev), rồi bắn 3 request song song sau khi hết hạn:
 
@@ -388,7 +586,7 @@ Promise.all([api.get('/auth/me'), api.get('/auth/me'), api.get('/auth/me')])
 
 Mở tab Network: kỳ vọng thấy **chỉ 1 lời gọi** `/auth/refresh` dù có 3 request 401 — nếu thấy 3 lời gọi refresh, hàng đợi (`isRefreshing`/`pendingQueue`) chưa hoạt động đúng, quay lại đọc mục 5 trong lý thuyết.
 
-#### Bước 6.4 — Trang /me + logout
+#### Bước 6.5 — Trang /me + logout
 
 Hiển thị `email`, `roles` từ response `/auth/me`; nút logout gọi `/auth/logout` rồi xoá access token khỏi bộ nhớ JS + điều hướng về `/login`.
 
