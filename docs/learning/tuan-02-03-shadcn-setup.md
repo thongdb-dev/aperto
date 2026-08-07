@@ -24,6 +24,25 @@ npm install tailwindcss @tailwindcss/postcss postcss
 
 Tailwind v4 không còn dùng `tailwind.config.js` dạng JS như v3 — cấu hình (màu, font, spacing...) khai báo thẳng trong CSS qua khối `@theme`. Điều này quan trọng vì các bước sau sẽ sửa CSS variables trực tiếp trong `globals.css`, không phải trong file config riêng.
 
+**Cài package thôi chưa đủ** — Tailwind chỉ thực sự "bật" khi có 2 thứ sau, thiếu 1 trong 2 thì `shadcn@latest init` ở Bước 2 sẽ báo lỗi *"No Tailwind CSS configuration found"* vì nó tìm không thấy dấu hiệu Tailwind đang chạy trong project:
+
+1. **`postcss.config.mjs`** ở root `apps/web` (chưa tồn tại — tạo mới):
+
+   ```js
+   const config = {
+     plugins: ['@tailwindcss/postcss'],
+   };
+   export default config;
+   ```
+
+2. **Dòng `@import "tailwindcss";`** ở đầu file CSS global. Dự án Aperto dùng cấu trúc `src/` (`src/app/...`, xem `tsconfig.json` có `"@/*": ["./src/*"]`), nên file cần sửa là **`src/app/globals.css`**, không phải `app/globals.css`. Thêm dòng này lên đầu file (giữ nguyên phần còn lại — Bước 3 sẽ thay hết bằng theme của shadcn):
+
+   ```css
+   @import "tailwindcss";
+   ```
+
+Sau 2 bước này, `apps/web` mới thực sự có "Tailwind CSS configuration" để `shadcn init` nhận ra.
+
 ## Bước 2 — Khởi tạo shadcn/ui
 
 ```bash
@@ -36,16 +55,15 @@ CLI sẽ hỏi vài câu — chọn:
 - **Base color**: `Neutral` — chọn nền trung tính vì màu thật sẽ tự ghi đè ở Bước 3, chọn base color nào cũng không quan trọng.
 - **CSS variables for theming**: `Yes` — **bắt buộc chọn Yes**, đây chính là cơ chế cho phép đổi light/dark chỉ bằng toggle 1 class, đúng như đã giải thích ở phần lý thuyết trước.
 
-Sau khi chạy xong, CLI tạo/sửa các file:
+CLI tự đọc `tsconfig.json` nên phát hiện đúng cấu trúc `src/` và hỏi xác nhận đường dẫn — cứ để mặc định. Sau khi chạy xong, CLI tạo/sửa các file:
 
-- `components.json` — cấu hình CLI (đường dẫn alias, style đã chọn).
-- `app/globals.css` — thêm `@import "tailwindcss";`, khối `@theme inline { ... }` map CSS variable sang Tailwind utility (`bg-background`, `text-foreground`...), và 2 khối `:root { --background: ...; }` / `.dark { --background: ...; }` chứa giá trị mặc định.
-- `lib/utils.ts` — hàm `cn()` (gộp class Tailwind có điều kiện, dùng `clsx` + `tailwind-merge`).
-- `postcss.config.mjs` — đăng ký plugin `@tailwindcss/postcss`.
+- `components.json` — cấu hình CLI (đường dẫn alias, style đã chọn, xác nhận file CSS là `src/app/globals.css`).
+- `src/app/globals.css` — ghi đè thành khối `@theme inline { ... }` map CSS variable sang Tailwind utility (`bg-background`, `text-foreground`...), và 2 khối `:root { --background: ...; }` / `.dark { --background: ...; }` chứa giá trị mặc định (dòng `@import "tailwindcss";` ở Bước 1 vẫn giữ nguyên ở đầu file).
+- `src/lib/utils.ts` — hàm `cn()` (gộp class Tailwind có điều kiện, dùng `clsx` + `tailwind-merge`).
 
 ## Bước 3 — Thay giá trị CSS variables bằng bảng màu Aperto
 
-Mở `app/globals.css`, tìm 2 khối `:root` và `.dark` mà CLI vừa tạo, **thay giá trị** (giữ nguyên tên biến, chỉ đổi hex) như sau:
+Mở `src/app/globals.css`, tìm 2 khối `:root` và `.dark` mà CLI vừa tạo, **thay giá trị** (giữ nguyên tên biến, chỉ đổi hex) như sau:
 
 ```css
 :root {
@@ -114,7 +132,32 @@ Vài điểm đáng chú ý:
 npm install next-themes
 ```
 
-Tạo `components/theme-provider.tsx`:
+**Dọn `providers.tsx` trước** — file `src/app/providers.tsx` hiện tại còn `createTheme`/`ThemeProvider`/`CssBaseline` từ `@mui/material/styles`, package đã gỡ ở Bước 1 nên import này sẽ lỗi ngay khi build. Bỏ toàn bộ phần MUI, chỉ giữ lại `QueryClientProvider`:
+
+```tsx
+// src/app/providers.tsx
+'use client';
+
+import { useState, type ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+export function Providers({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1 },
+        },
+      }),
+  );
+
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
+```
+
+Theme (màu sắc, light/dark) giờ do CSS variables + `next-themes` phụ trách — không còn `createTheme()` kiểu MUI nữa.
+
+Tạo `src/components/theme-provider.tsx`:
 
 ```tsx
 'use client';
@@ -130,17 +173,18 @@ export function ThemeProvider({
 }
 ```
 
-Bọc trong `app/layout.tsx`:
+Bọc trong `src/app/layout.tsx` (giữ nguyên `<Providers>` đã có, chỉ thêm `ThemeProvider` bọc ngoài):
 
 ```tsx
 import { ThemeProvider } from '@/components/theme-provider';
+import { Providers } from './providers';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <Providers>{children}</Providers>
         </ThemeProvider>
       </body>
     </html>
@@ -160,7 +204,7 @@ npx shadcn@latest add button dropdown-menu
 ```
 
 ```tsx
-// components/theme-toggle.tsx
+// src/components/theme-toggle.tsx
 'use client';
 
 import { useTheme } from 'next-themes';
