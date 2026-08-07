@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +22,8 @@ import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(REDIS_CLIENT) private redis: Redis,
@@ -36,6 +39,15 @@ export class AuthService {
         email: dto.email,
         password_hash,
       });
+      try {
+        await this.sendOtp(user);
+      } catch (emailErr) {
+        // Tài khoản đã tạo thành công — không chặn đăng ký chỉ vì email provider lỗi.
+        // Người dùng vẫn có thể bấm "Gửi lại mã" (POST /auth/resend-otp) sau đó.
+        this.logger.error(
+          `Không gửi được OTP đăng ký cho ${user.email}: ${(emailErr as Error).message}`,
+        );
+      }
       return { id: user._id, email: user.email };
     } catch (err) {
       if (isMongoServerError(err) && err.code === 11000) {
@@ -128,21 +140,37 @@ export class AuthService {
   async verifyOtp(userId: string, code: string) {
     const key = `otp:${userId}`;
     const attemptsKey = `otp_attempts:${userId}`;
-    const attempts = parseInt((await this.redis.get(attemptsKey)) ?? '0', 10);
-    if (attempts === 1) {
-      await this.redis.expire(attemptsKey, 600);
-    }
-    if (attempts > 5) {
-      throw new TooManyRequestsException('Quá số lần thử, yêu cầu OTP mới');
-    }
 
     const stored = await this.redis.get(key);
-    if (!stored || stored !== code) {
+    if (!stored) {
+      throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
+    }
+
+    if (stored !== code) {
+      const attempts = await this.redis.incr(attemptsKey);
+      if (attempts === 1) {
+        await this.redis.expire(attemptsKey, 600);
+      }
+      if (attempts >= 5) {
+        // Đã dùng hết lượt thử: xoá OTP luôn để bắt buộc phải yêu cầu mã mới.
+        await this.redis.del(key, attemptsKey);
+        throw new TooManyRequestsException('Quá số lần thử, yêu cầu OTP mới');
+      }
       throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
     }
 
     await this.redis.del(key, attemptsKey);
-    return true;
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      { status: 'active' },
+      { new: true },
+    );
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    // Trả cặp token mới để payload `status` trong JWT phản ánh trạng thái active ngay,
+    // không bắt người dùng đăng nhập lại sau khi xác thực OTP.
+    return this.login(user);
   }
 
   private generateOtp(): string {
@@ -153,6 +181,20 @@ export class AuthService {
     const code = this.generateOtp();
     await this.redis.set(`otp:${user._id.toString()}`, code, 'EX', 600);
     await this.emailService.sendOtpEmail(user.email, code);
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return {
+      userId: user._id.toString(),
+      email: user.email,
+      phone: user.phone,
+      roles: user.roles,
+      status: user.status,
+    };
   }
 
   async requestOtp(userId: string) {

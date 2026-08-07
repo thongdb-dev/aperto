@@ -39,23 +39,23 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 > 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-02-03.md](./docs/learning/tuan-02-03.md)
 
 **📚 Học**
-- [ ] JWT: cấu trúc token, access vs refresh, tại sao cần rotation, lưu token ở đâu (cookie httpOnly vs localStorage — trade-off)
-- [ ] NestJS: Guard, custom decorator (`@CurrentUser()`), Passport strategy (local + JWT)
-- [ ] bcrypt: salt, cost factor; tại sao không dùng SHA256 cho mật khẩu
-- [ ] Mongoose: schema, model, index unique
+- [x] JWT: cấu trúc token, access vs refresh, tại sao cần rotation, lưu token ở đâu (cookie httpOnly vs localStorage — trade-off)
+- [x] NestJS: Guard, custom decorator (`@CurrentUser()`), Passport strategy (local + JWT)
+- [x] bcrypt: salt, cost factor; tại sao không dùng SHA256 cho mật khẩu
+- [x] Mongoose: schema, model, index unique
 
 **🔨 Làm**
-- [ ] `users` collection theo [docs/04-data-model.md](./docs/04-data-model.md); đăng ký + hash mật khẩu
-- [ ] Login trả access (15 phút) + refresh token (7 ngày); refresh rotation; revoke qua Redis khi logout
-- [ ] `RolesGuard` phân quyền customer/photographer/admin theo Q7 (vai trò kép)
-- [ ] OTP email xác thực tài khoản (dùng Resend/Mailtrap cho dev)
-- [ ] FE: form đăng ký/đăng nhập (MUI + react-hook-form), axios interceptor tự refresh khi 401 — pattern này bạn đã làm ở dự án thật, giờ tự viết phía server
-- [ ] Cuối tuần 3 nếu còn thời gian: Google login qua Passport (không thì dời sang backlog)
+- [x] `users` collection theo [docs/04-data-model.md](./docs/04-data-model.md); đăng ký + hash mật khẩu
+- [x] Login trả access (15 phút) + refresh token (7 ngày); refresh rotation; revoke qua Redis khi logout
+- [x] `RolesGuard` phân quyền customer/photographer/admin theo Q7 (vai trò kép)
+- [x] OTP email xác thực tài khoản (dùng Resend/Mailtrap cho dev) — `POST /auth/verify-otp` đã nối, `register()` tự gửi OTP, xác thực đúng sẽ chuyển `status` sang `active`. Quyết định chính sách: **không chặn login** khi `pending_verification`, chỉ chặn một số chức năng qua `VerifiedGuard` (`@RequireVerified()`, xem route demo `GET /auth/verified-only`)
+- [x] FE: form đăng ký/đăng nhập (shadcn/ui + react-hook-form), axios interceptor tự refresh khi 401 — form + interceptor + màn xác thực OTP đã xong; "/me" dùng lại tab Hồ sơ cá nhân ở `/settings` (dữ liệu thật từ `GET /auth/me`) với nút logout gọi API thật (đã sửa cả nút logout ở topbar)
+- [ ] Cuối tuần 3 nếu còn thời gian: Google login qua Passport (không thì dời sang backlog) — chưa làm, để ở Backlog
 
 **✅ Kiểm chứng**
-- [ ] Vẽ lại được sequence diagram luồng refresh token không nhìn tài liệu
-- [ ] Test bằng curl: token hết hạn → 401 → refresh → retry thành công; logout xong refresh token cũ bị từ chối
-- [ ] Viết unit test đầu tiên cho `AuthService` (register + login)
+- [ ] Vẽ lại được sequence diagram luồng refresh token không nhìn tài liệu — tự làm, chưa có bằng chứng đã thực hiện
+- [ ] Test bằng curl: token hết hạn → 401 → refresh → retry thành công; logout xong refresh token cũ bị từ chối — logic đã cài đủ (rotation + reuse detection), nhưng chưa chạy/lưu script kiểm chứng
+- [ ] Viết unit test đầu tiên cho `AuthService` (register + login) — **chưa có**, chưa có file `auth.service.spec.ts` nào
 
 ## Tuần 4–5 — M2: Profile, Portfolio & Media pipeline
 
@@ -220,3 +220,8 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 > Mỗi tuần thêm một mục: học được gì / kẹt ở đâu / quyết định gì.
 
 - _(trống — bắt đầu từ Tuần 1)_
+
+**2026-08-07 (Tuần 2–3 — OTP & pending_verification):**
+- Quyết định: **login giới hạn**, không chặn hoàn toàn khi `status = pending_verification`. User pending vẫn nhận access + refresh token bình thường; chỉ những route đánh dấu `@RequireVerified()` (dùng `VerifiedGuard`, đọc `status` thẳng từ JWT payload — không query DB lại) mới trả 403. Route demo: `GET /auth/verified-only`. Lý do: thân thiện hơn với user lỡ bỏ qua bước xác thực email, và tận dụng đúng pattern `SetMetadata` + `Reflector` đã học ở `RolesGuard` (Buổi 3) thay vì viết cơ chế mới.
+- Đã nối `POST /auth/verify-otp` (trước đó `AuthService.verifyOtp` có sẵn nhưng không controller nào gọi); `register()` giờ tự gửi OTP; verify đúng mã sẽ cập nhật `status` sang `active` và trả cặp token mới luôn (tránh phải đăng nhập lại).
+- Bug phát hiện khi làm: giới hạn "5 lần thử OTP sai" trước đó không hoạt động vì đếm `attempts` bằng `GET` thay vì `INCR` — đã sửa.

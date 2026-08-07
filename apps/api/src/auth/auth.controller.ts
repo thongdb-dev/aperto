@@ -9,13 +9,16 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { VerifiedGuard } from './guards/verified.guard';
 import {
   CurrentUser,
   type AuthenticatedUser,
 } from './decorators/current-user.decorator';
 import { Roles } from './decorators/roles.decorator';
+import { RequireVerified } from './decorators/require-verified.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -38,7 +41,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@CurrentUser() user: AuthenticatedUser) {
-    return user;
+    return this.authService.getProfile(user.userId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -46,6 +49,15 @@ export class AuthController {
   @Get('photographer-only')
   photographerOnly(@CurrentUser() user: AuthenticatedUser) {
     return { message: 'This route is only accessible to photographers', user };
+  }
+
+  // Demo cho VerifiedGuard: tài khoản `pending_verification` vẫn login được bình thường,
+  // nhưng bị chặn ở những route có @RequireVerified() cho tới khi xác thực OTP.
+  @UseGuards(JwtAuthGuard, VerifiedGuard)
+  @RequireVerified()
+  @Get('verified-only')
+  verifiedOnly(@CurrentUser() user: AuthenticatedUser) {
+    return { message: 'This route requires a verified account', user };
   }
 
   @Post('refresh')
@@ -66,5 +78,10 @@ export class AuthController {
   @Post('resend-otp')
   resendOtp(@Body('userId') userId: string) {
     return this.authService.requestOtp(userId);
+  }
+
+  @Post('verify-otp')
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto.userId, dto.code);
   }
 }

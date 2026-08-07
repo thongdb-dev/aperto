@@ -9,6 +9,7 @@ import { HueAvatar } from '@/components/aperto/hue-avatar';
 import { useAppState, roleHome } from '@/components/aperto/app-state';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import { logout } from '@/lib/api/auth';
 import { currentCustomer, currentPhotographer, type UserRole } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +46,11 @@ export function Topbar() {
   const switchRole = (r: UserRole) => {
     setRole(r);
     router.push(roleHome(r));
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
   };
 
   return (
@@ -97,7 +103,7 @@ export function Topbar() {
           </Button>
         )}
         <ThemeToggle />
-        <Button variant="outline" size="icon" title="Đăng xuất" nativeButton={false} render={<Link href="/login" />}>
+        <Button variant="outline" size="icon" title="Đăng xuất" onClick={handleLogout}>
           <LogOut />
         </Button>
         <HueAvatar name={user.name} hue={user.avatarHue} />

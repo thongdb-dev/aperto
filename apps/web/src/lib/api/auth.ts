@@ -20,10 +20,12 @@ export interface LoginPayload {
   password: string;
 }
 
-// Matches AuthenticatedUser in apps/api/src/auth/decorators/current-user.decorator.ts —
-// what the JwtStrategy attaches to request.user from the access token payload.
+// Matches AuthService.getProfile() in apps/api/src/auth/auth.service.ts — /auth/me reads the
+// current user document from Mongo (not just the JWT payload) so email/phone stay up to date.
 export interface MeResult {
   userId: string;
+  email: string;
+  phone?: string;
   roles: string[];
   status: string;
 }
@@ -57,4 +59,15 @@ export async function logout(): Promise<void> {
 
 export async function resendOtp(userId: string): Promise<void> {
   await api.post('/auth/resend-otp', { userId });
+}
+
+export interface VerifyOtpPayload {
+  userId: string;
+  code: string;
+}
+
+export async function verifyOtp(payload: VerifyOtpPayload): Promise<AuthTokens> {
+  const res = await api.post<AuthTokens>('/auth/verify-otp', payload);
+  setSession(res.data);
+  return res.data;
 }

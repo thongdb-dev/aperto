@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getApiErrorMessage } from "@/lib/api/client";
-import { getMe, login, register } from "@/lib/api/auth";
+import { getMe, login, register, resendOtp, verifyOtp } from "@/lib/api/auth";
 import type { UserRole } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -48,12 +48,21 @@ const authSchema = yup.object({
 
 type AuthFormValues = yup.InferType<typeof authSchema>;
 
+interface PendingVerification {
+  userId: string;
+  email: string;
+}
+
 export function AuthScreen() {
   const { setRole } = useAppState();
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "otp">("login");
   const [role, setLocalRole] = useState<UserRole>("customer");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingVerification | null>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
   const {
     register: registerField,
     handleSubmit,
@@ -63,6 +72,13 @@ export function AuthScreen() {
     defaultValues: { },
   });
 
+  const enterAppForRole = async () => {
+    const me = await getMe();
+    const realRole = resolveRole(me.roles);
+    setRole(realRole);
+    router.push(roleHome(realRole));
+  };
+
   const onSubmit = async ({ email, password }: AuthFormValues) => {
     setError(null);
     try {
@@ -71,9 +87,52 @@ export function AuthScreen() {
       }
       await login({ email, password });
       const me = await getMe();
+      // Login không bị chặn khi tài khoản chưa xác thực OTP — chỉ một số chức năng
+      // (route có @RequireVerified() ở BE) mới bị chặn cho tới khi xác thực xong.
+      if (me.status === "pending_verification") {
+        setPending({ userId: me.userId, email });
+        setMode("otp");
+        return;
+      }
       const realRole = resolveRole(me.roles);
       setRole(realRole);
       router.push(roleHome(realRole));
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  };
+
+  const onOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pending) return;
+    setError(null);
+    setOtpSubmitting(true);
+    try {
+      await verifyOtp({ userId: pending.userId, code: otpCode });
+      await enterAppForRole();
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setOtpSubmitting(false);
+    }
+  };
+
+  const onResendOtp = async () => {
+    if (!pending) return;
+    setError(null);
+    setResendMessage(null);
+    try {
+      await resendOtp(pending.userId);
+      setResendMessage("Đã gửi lại mã xác thực, kiểm tra email của bạn.");
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  };
+
+  const onSkipVerification = async () => {
+    setError(null);
+    try {
+      await enterAppForRole();
     } catch (err) {
       setError(getApiErrorMessage(err));
     }
@@ -103,6 +162,71 @@ export function AuthScreen() {
       </div>
 
       <div className="flex items-center justify-center p-8">
+        {mode === "otp" ? (
+          <form onSubmit={onOtpSubmit} className="w-full max-w-sm">
+            <h1 className="mb-2 font-heading text-2xl font-semibold">
+              Xác thực email
+            </h1>
+            <p className="mb-6 text-muted-foreground">
+              Nhập mã 6 số vừa gửi tới{" "}
+              <strong className="text-foreground">{pending?.email}</strong>.
+              Bạn vẫn có thể vào ứng dụng ngay, nhưng một số chức năng sẽ bị
+              khoá cho tới khi xác thực xong.
+            </p>
+
+            <div className="mb-6 flex flex-col gap-1.5">
+              <Label htmlFor="otp">Mã xác thực</Label>
+              <Input
+                id="otp"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) =>
+                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                placeholder="000000"
+              />
+            </div>
+
+            {resendMessage && (
+              <p className="mb-4 text-sm text-muted-foreground">
+                {resendMessage}
+              </p>
+            )}
+            {error && (
+              <p className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              size="xl"
+              className="w-full"
+              disabled={otpSubmitting || otpCode.length !== 6}
+            >
+              {otpSubmitting ? "Đang xác thực..." : "Xác thực"}
+            </Button>
+
+            <div className="mt-5 flex items-center justify-between text-sm">
+              <button
+                type="button"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+                onClick={onResendOtp}
+              >
+                Gửi lại mã
+              </button>
+              <button
+                type="button"
+                className="text-muted-foreground underline-offset-4 hover:underline"
+                onClick={onSkipVerification}
+              >
+                Xác thực sau, vào ứng dụng
+              </button>
+            </div>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm">
           <h1 className="mb-2 font-heading text-2xl font-semibold">
             {mode === "login" ? "Chào mừng trở lại" : "Tạo tài khoản Aperto"}
@@ -237,6 +361,7 @@ export function AuthScreen() {
             )}
           </p>
         </form>
+        )}
       </div>
     </div>
   );
