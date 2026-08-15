@@ -181,17 +181,19 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 > 📝 Bài tập chi tiết từng buổi: [docs/learning/tuan-16.md](./docs/learning/tuan-16.md)
 
+> ⚠️ **Phần Deploy (Buổi 1–2) đã làm sớm hơn lịch**, trước khi M2–M7 xong, để có URL production thật dùng suốt quá trình học — không có nghĩa cả Tuần 16 đã hoàn thành. Admin/dispute/rate-limit/Sentry (Buổi 3–5) vẫn chưa làm, chờ đúng module tương ứng build xong (Q7 verification, Q9 dispute, M6 payment...).
+
 **📚 Học**
-- [ ] Deploy thực tế: VPS/Railway/Render (chọn 1), reverse proxy, HTTPS, biến môi trường production
+- [x] Deploy thực tế: VPS/Railway/**Render** (đã chọn Render, không Railway), reverse proxy, HTTPS — platform lo hết (không tự cấu hình nginx/certbot), biến môi trường production set qua dashboard Render/Vercel, không commit
 - [ ] Cơ bản về rate limiting (`@nestjs/throttler`), Sentry error monitoring
 
 **🔨 Làm**
 - [ ] Admin tối thiểu: duyệt verification, danh sách dispute + quyết định hoàn tiền (Q9), dashboard thống kê bằng aggregation
-- [ ] Deploy: FE lên Vercel; API + Mongo + Redis lên Railway/Render/VPS; CI/CD deploy tự động khi merge `main`
+- [x] Deploy: FE lên Vercel (https://aperto-kappa.vercel.app); API lên Render (https://aperto.onrender.com) + MongoDB Atlas + Upstash Redis; CI/CD tự deploy khi merge `main` (built-in của Render/Vercel). Chi tiết + gotcha thật gặp phải (`.dockerignore` thiếu làm lộ `.env` vào image, Upstash cần `rediss://` TLS, Render free tier tự ngủ → thêm GitHub Actions [`keep-alive.yml`](./.github/workflows/keep-alive.yml)): xem [dev-guide.md §7](./docs/dev-guide.md#7-deploy-targets-free-tier)
 - [ ] Rate limit auth endpoints, Sentry cho cả FE + API, backup Mongo định kỳ
 
 **✅ Kiểm chứng**
-- [ ] Gửi link production cho một người bạn đặt thử một booking end-to-end bằng điện thoại
+- [ ] Gửi link production cho một người bạn đặt thử một booking end-to-end bằng điện thoại — chưa thể test (booking chưa build), nhưng đã tự verify luồng auth thật trên production: đăng ký → đăng nhập → xác thực OTP → Settings phản ánh đúng trạng thái, qua đúng domain Vercel + Render
 - [ ] Cố tình throw error ở API → thấy event trên Sentry
 
 ---
@@ -219,7 +221,7 @@ Lộ trình cá nhân bám theo các milestone trong [ROADMAP.md](./ROADMAP.md),
 
 > Mỗi tuần thêm một mục: học được gì / kẹt ở đâu / quyết định gì.
 
-- _(trống — bắt đầu từ Tuần 1)_
+- **2026-08-07 — Deploy hạ tầng sớm (trước lịch Tuần 16)**: dựng production thật (Vercel + Render + MongoDB Atlas + Upstash Redis) trong lúc vẫn đang ở M1, để có URL thật dùng xuyên suốt quá trình học thay vì chỉ demo local. Học được 2 gotcha không có trong lý thuyết: (1) Dockerfile `COPY apps/api apps/api` mà thiếu `.dockerignore` sẽ copy thẳng `.env` thật vào image — phải tự build + `docker run ... find /` kiểm tra trước khi tin; (2) Upstash bắt buộc `rediss://` (TLS), sai scheme thì lỗi hiện ra là `MaxRetriesPerRequestError` mơ hồ chứ không nói rõ là sai giao thức. Quyết định thêm: dùng GitHub Actions cron (`keep-alive.yml`) ping `/health` mỗi 10 phút để né Render free tier tự ngủ, thay vì trả phí sớm. Chi tiết: [dev-guide.md §7](./docs/dev-guide.md#7-deploy-targets-free-tier).
 
 **2026-08-07 (Tuần 2–3 — OTP & pending_verification):**
 - Quyết định: **login giới hạn**, không chặn hoàn toàn khi `status = pending_verification`. User pending vẫn nhận access + refresh token bình thường; chỉ những route đánh dấu `@RequireVerified()` (dùng `VerifiedGuard`, đọc `status` thẳng từ JWT payload — không query DB lại) mới trả 403. Route demo: `GET /auth/verified-only`. Lý do: thân thiện hơn với user lỡ bỏ qua bước xác thực email, và tận dụng đúng pattern `SetMetadata` + `Reflector` đã học ở `RolesGuard` (Buổi 3) thay vì viết cơ chế mới.

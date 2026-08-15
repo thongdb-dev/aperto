@@ -50,6 +50,15 @@ Kiểm tra hạ tầng: `curl http://localhost:4000/api/v1/health` → `{"status
 
 Chạy API trong container (không cần Node trên host): `docker compose --profile full up`.
 
+## Deploy
+
+Đã deploy sớm (trước khi hết M2–M7) để có URL production thật dùng xuyên suốt quá trình học — chi tiết + gotcha thực tế tại [dev-guide.md §7](./docs/dev-guide.md#7-deploy-targets-free-tier).
+
+| Thành phần | URL |
+|---|---|
+| Web (Vercel) | https://aperto-kappa.vercel.app |
+| API (Render) | https://aperto.onrender.com/api/v1/health |
+
 Cấu trúc monorepo (npm workspaces):
 
 ```

@@ -144,23 +144,26 @@ Ghi chú vận hành: nếu `npm install` lỗi `EACCES` ở `~/.npm` (cache dí
 
 ## 7. Deploy targets (free tier)
 
-Kế hoạch deploy cho M8. Trước đó chạy local là đủ — kể cả M6/Stripe (dùng `stripe listen` forward webhook về local, chưa cần URL công khai).
+**Đã triển khai thật** (sớm hơn kế hoạch gốc — bản thân M2–M7 chưa xong, nhưng hạ tầng deploy dựng trước để có URL thật sớm; xem [tuan-16.md](./learning/tuan-16.md) Buổi 1–2):
 
-| Thành phần | Dịch vụ | Free tier | Ghi chú |
+| Thành phần | Dịch vụ | URL | Ghi chú |
 |---|---|---|---|
-| `apps/web` | **Vercel** (Hobby) | Thoải mái cho hobby | Chính chủ Next.js, auto deploy theo git push |
-| `apps/api` | **Render** (free web service) | 512MB RAM | ⚠️ Ngủ sau ~15 phút idle, cold start ~30–60s |
-| MongoDB | **MongoDB Atlas** (M0) | 512MB storage | Không ngủ, đủ cho toàn bộ MVP |
-| Redis | **Upstash** (free) | Quota theo số lệnh/tháng | Serverless, không ngủ |
-| Ảnh | **Cloudflare R2** | 10GB + egress miễn phí | Đúng lựa chọn trong SRS |
-| Email | **Resend** (free) | ~100 email/ngày | Đủ cho OTP + notification |
-| Thanh toán | **Stripe test mode** | Miễn phí vô hạn | Không cần tiền thật |
+| `apps/web` | **Vercel** (Hobby) | https://aperto-kappa.vercel.app | Root Directory `apps/web`, auto deploy theo git push lên `main` |
+| `apps/api` | **Render** (free web service) | https://aperto.onrender.com | Docker runtime, `Dockerfile Path: apps/api/Dockerfile`, build context = repo root; ⚠️ ngủ sau ~15 phút idle, cold start ~30–60s |
+| MongoDB | **MongoDB Atlas** (M0) | — | Replica set mặc định (có lợi cho transaction ở M4), Network Access phải mở `0.0.0.0/0` vì Render free không có static IP |
+| Redis | **Upstash** (free) | — | Serverless, không ngủ |
+| Ảnh | **Cloudflare R2** | — | Chưa deploy — tới M2 |
+| Email | **Resend** (free) | — | Đã dùng thật cho OTP (M1) |
+| Thanh toán | **Stripe test mode** | — | Chưa deploy — tới M6 |
 
-**Ba điểm cần biết:**
+**Năm điểm cần biết (2 điểm đầu là gotcha thật đã gặp, không phải lý thuyết):**
 
-1. **API ngủ trên Render free là đánh đổi lớn nhất** — ảnh hưởng chat Socket.IO (M5): container ngủ là rớt kết nối, request đầu sau giờ nghỉ chờ cold start. Demo/học chấp nhận được; cần always-on thì nâng instance trả phí (~7$/tháng) hoặc chuyển VPS.
-2. **BullMQ + Upstash free cần để ý** — BullMQ polling Redis liên tục, Upstash free tính quota theo số lệnh nên worker 24/7 có thể ăn hết quota. Xử lý: concurrency thấp + tăng `drainDelay`, hoặc dùng Redis Cloud 30MB free (tính theo dung lượng, không theo lệnh).
-3. **Cron tính Trust Score (M7)** chạy trong process API — API ngủ thì cron không chạy. Giải pháp free: cron-job.org hoặc GitHub Actions schedule gọi endpoint đánh thức + kích hoạt job.
+1. **`.dockerignore` là bắt buộc, không phải tối ưu** — `apps/api/Dockerfile` có `COPY apps/api apps/api`; không có `.dockerignore` thì `apps/api/.env` (chứa secret Atlas/Upstash/JWT/Resend thật), `node_modules`, `dist` local bị copy thẳng vào build context và cả vào image. Đã thêm `.dockerignore` ở repo root — luôn build thử local (`docker build -f apps/api/Dockerfile .` rồi `docker run --rm <image> find / -iname ".env*"`) trước khi trỏ Render vào repo.
+2. **Upstash bắt buộc TLS** — connection string phải là `rediss://` (2 chữ `s`), không phải `redis://`. Dùng sai scheme thì `ioredis` connect timeout lặp lại rồi ném `MaxRetriesPerRequestError`, dễ tưởng nhầm là sai password/host.
+3. **API ngủ trên Render free là đánh đổi lớn nhất** — ảnh hưởng chat Socket.IO (M5): container ngủ là rớt kết nối, request đầu sau giờ nghỉ chờ cold start. Đã mitigate bằng [`.github/workflows/keep-alive.yml`](../.github/workflows/keep-alive.yml) — GitHub Actions cron ping `/api/v1/health` mỗi 10 phút (< ngưỡng ngủ 15 phút). Free, không cần thêm tài khoản ngoài, nhưng cron GitHub không đảm bảo giờ tuyệt đối — cần always-on thật sự thì nâng instance trả phí hoặc chuyển VPS.
+4. **BullMQ + Upstash free cần để ý** — BullMQ polling Redis liên tục, Upstash free tính quota theo số lệnh nên worker 24/7 có thể ăn hết quota. Xử lý: concurrency thấp + tăng `drainDelay`, hoặc dùng Redis Cloud 30MB free (tính theo dung lượng, không theo lệnh).
+5. **Cron tính Trust Score (M7)** chạy trong process API — API ngủ thì cron không chạy. Cùng giải pháp với điểm 3 (`keep-alive.yml` giữ container ấm) là đủ, không cần thêm cron riêng.
+6. **CORS**: `CORS_ORIGIN` trên Render phải trỏ đúng domain Vercel (không để mặc định `true`/mọi origin) sau khi FE có domain thật — dễ quên vì lúc mới deploy BE, FE chưa có domain nên buộc phải để mở tạm.
 
 **Phương án thay thế cho M8:** VPS **Oracle Cloud Always Free** (ARM 4 vCPU / 24GB RAM — hào phóng nhất thị trường, nhưng đăng ký hay bị từ chối). Chạy nguyên `docker compose --profile full up` — API + Mongo + Redis luôn bật, sát production và đúng mục tiêu học devops hơn PaaS bấm nút. Web vẫn để Vercel.
 
