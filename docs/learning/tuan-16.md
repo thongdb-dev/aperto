@@ -10,17 +10,20 @@
 
 ### Buổi 1–2 (~6h): Deploy trước, admin sau
 
-**Học (1h):** chọn 1 target (gợi ý từ [dev-guide](../dev-guide.md): Railway/Render free tier cho API + Redis, MongoDB Atlas M0, Vercel cho FE). Hiểu: biến môi trường production khác dev thế nào, HTTPS ai lo (platform lo), CORS giữa domain Vercel và domain API.
+> **Đã làm sớm hơn lịch** (trước khi M2–M7 xong) để có URL thật dùng suốt quá trình học. Chi tiết đầy đủ + gotcha thực tế: [dev-guide.md §7](../dev-guide.md#7-deploy-targets-free-tier).
+
+**Học (1h):** chọn 1 target — đã chọn **Render** (không phải Railway) cho API, **MongoDB Atlas M0** + **Upstash Redis** cho DB/cache, **Vercel** cho FE. Hiểu: biến môi trường production khác dev thế nào, HTTPS ai lo (platform lo), CORS giữa domain Vercel và domain API.
 
 **Làm (5h):**
 
-- [ ] MongoDB Atlas M0 + Redis managed (Railway/Upstash); cập nhật env validation nếu cần (TLS URI)
-- [ ] Deploy API (Dockerfile sẵn có từ M0) — health check `/api/v1/health` xanh trên production
-- [ ] Deploy FE lên Vercel, trỏ `NEXT_PUBLIC_API_URL`; CORS chỉ cho phép domain FE; cookie/token hoạt động cross-domain (kiểm tra kỹ nếu dùng cookie httpOnly — cần `SameSite=None; Secure`)
-- [ ] CI/CD: merge `main` → tự deploy (Railway/Render auto-deploy hoặc thêm job vào [ci.yml](../../.github/workflows/ci.yml))
-- [ ] Stripe webhook production: endpoint thật + signing secret mới (không dùng secret của CLI)
+- [x] MongoDB Atlas M0 + Redis managed (Upstash); **lưu ý TLS**: Upstash bắt buộc scheme `rediss://` (2 chữ `s`), không phải `redis://` — sai scheme thì `ioredis` báo `MaxRetriesPerRequestError` chứ không báo lỗi auth rõ ràng. Env validation (`Joi.string().uri()`) đã chấp nhận cả 2 scheme sẵn, không cần sửa code.
+- [x] Deploy API (Dockerfile sẵn có từ M0) — health check `/api/v1/health` xanh trên production (`{"status":"ok","dependencies":{"mongo":"up","redis":"up"}}`). **Trước khi trỏ Render vào repo đã phát hiện thiếu `.dockerignore`** — `COPY apps/api apps/api` trong Dockerfile sẽ copy thẳng `.env` thật (chứa secret) + `node_modules`/`dist` local vào image nếu không ignore; đã thêm `.dockerignore` ở root và verify bằng `docker build` + `docker run ... find / -iname ".env*"` (rỗng = an toàn) trước khi push.
+- [x] Deploy FE lên Vercel, trỏ `NEXT_PUBLIC_API_URL=https://aperto.onrender.com/api/v1`. CORS: `CORS_ORIGIN` trên Render set đúng domain Vercel (`https://aperto-kappa.vercel.app`) sau khi FE có domain thật — bước dễ quên vì lúc deploy BE trước, FE chưa có domain nên phải để mở tạm rồi quay lại siết. Không dùng cookie httpOnly ở M1 (access/refresh token trả trong JSON body, xem [tuan-02-jwt-tokens.md](./tuan-02-jwt-tokens.md)) nên không có vấn đề `SameSite`/cross-domain cookie.
+- [x] CI/CD: merge `main` → tự deploy — Render và Vercel đều tự động deploy khi push lên `main` (không cần thêm job riêng trong `ci.yml`, CI hiện tại vẫn chỉ lo lint/build/test).
+- [x] **Ngoài dự kiến ban đầu**: thêm [`.github/workflows/keep-alive.yml`](../../.github/workflows/keep-alive.yml) — cron GitHub Actions ping `/health` mỗi 10 phút để tránh Render free tier ngủ sau 15 phút idle.
+- [ ] Stripe webhook production: chưa làm — M6 (Payment) chưa build
 
-**Tự vấn:** socket.IO qua Vercel/Railway có gì cần lưu ý? (FE Vercel chỉ là client — OK; API cần platform hỗ trợ WebSocket, Railway/Render có).
+**Tự vấn:** socket.IO qua Vercel/Render có gì cần lưu ý? (FE Vercel chỉ là client — OK; API cần platform hỗ trợ WebSocket, Render có, nhưng container ngủ = rớt kết nối — cùng vấn đề với `keep-alive.yml` ở trên, tới M5 cần nhớ lại điểm này).
 
 ### Buổi 3 (~3h): Admin — duyệt verification + thống kê
 
